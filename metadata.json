@@ -1,0 +1,9 @@
+{
+  "name": "AreaLine Neural Interface",
+  "description": "High-fidelity logistics console with AreaLine Advance, Voice Manifesting, and Mechanic Radar for elite pilot operations.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
