@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { 
   MessageCircle, 
@@ -20,8 +19,8 @@ import {
   Activity,
   ChevronRight
 } from 'lucide-react';
-import { CommunityPost, ChatMessage } from '../types';
-import { SimiAIService, decode, decodeAudioData, getOutputContext } from '../services/geminiService';
+import { CommunityPost, ChatMessage } from './types';
+import { SimiAIService, decode, decodeAudioData, getOutputContext } from './services/geminiService';
 
 interface CommunityProps {
   onViewProfile?: (id: string) => void;
