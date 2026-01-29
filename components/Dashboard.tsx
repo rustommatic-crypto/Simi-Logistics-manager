@@ -1,10 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Volume2, 
-  Radio,
   Activity,
-  Navigation,
-  Zap,
   PackageSearch,
   Wallet,
   Users,
@@ -13,17 +9,14 @@ import {
   Truck,
   ChevronRight,
   Play,
-  Info,
   Monitor,
   Wifi,
-  Signal,
-  Cpu
+  Signal
 } from 'lucide-react';
-import { NewsItem, UserRole, RouteMode, VerificationStatus, OrderCluster } from '../types';
+import { UserRole, RouteMode, VerificationStatus, OrderCluster } from '../types';
 import { SimiAIService, decode, decodeAudioData, getOutputContext } from '../services/geminiService';
 import { ambientEngine } from '../services/ambientEngine';
 
-// Combined Feed: Briefings + News + Traffic
 const gridFeed = [
   { 
     id: 'orient-1', 
@@ -78,7 +71,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSignalIndex, setCurrentSignalIndex] = useState(0);
 
-  const simi = new SimiAIService();
+  const simi = useMemo(() => new SimiAIService(), []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -111,6 +104,9 @@ const Dashboard: React.FC<DashboardProps> = ({
           ambientEngine.resumeAfterVoice(); 
         };
         source.start();
+      } else {
+        setIsPlaying(false);
+        ambientEngine.resumeAfterVoice();
       }
     } catch (e) { 
       setIsPlaying(false); 
@@ -129,8 +125,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="flex flex-col p-4 md:p-10 gap-6 max-w-[1400px] mx-auto pb-40 text-left animate-in fade-in duration-700">
-      
-      {/* HUD HEADER TABS */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide no-scrollbar">
          {navTabs.map((tab) => (
            <button 
@@ -144,7 +138,6 @@ const Dashboard: React.FC<DashboardProps> = ({
          ))}
       </div>
 
-      {/* NEURAL TV TERMINAL */}
       <div className="relative w-full aspect-video md:aspect-[21/9] bg-[#0A0A0A] border-4 border-white/5 rounded-[3rem] overflow-hidden shadow-2xl group ring-1 ring-white/10">
           <img 
             key={currentSignal.id}
