@@ -135,10 +135,10 @@ const OrderClusters: React.FC<OrderClustersProps> = ({
         <div className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-3xl flex flex-col items-center justify-center p-12 space-y-12">
            <RefreshCcw size={80} className="text-[#E60000] animate-spin" />
            <div className="bg-[#0A0A0A] border border-white/10 p-12 rounded-[3.5rem] space-y-5 h-64 overflow-hidden relative shadow-2xl w-full max-w-xl">
-              <p className="text-[11px] text-white/30 italic">>> HANDSHAKE: WhatsApp Bridge v2.1</p>
-              <p className="text-[11px] text-[#25D366] italic">>> INTERCEPTING 3 NEW MESSAGES FROM 'LAGOS TRUCKERS' GROUP</p>
-              <p className="text-[11px] text-white/30 italic">>> Simi AI: Extracting coordinates...</p>
-              <p className="text-[11px] text-[#E60000] italic">>> CLUSTER BUNDLES READY.</p>
+              <p className="text-[11px] text-white/30 italic">{" >> HANDSHAKE: WhatsApp Bridge v2.1"}</p>
+              <p className="text-[11px] text-[#25D366] italic">{" >> INTERCEPTING 3 NEW MESSAGES FROM 'LAGOS TRUCKERS' GROUP"}</p>
+              <p className="text-[11px] text-white/30 italic">{" >> Simi AI: Extracting coordinates..."}</p>
+              <p className="text-[11px] text-[#E60000] italic">{" >> CLUSTER BUNDLES READY."}</p>
            </div>
         </div>
       )}
