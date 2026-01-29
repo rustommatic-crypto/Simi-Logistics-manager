@@ -11,16 +11,39 @@ import {
   Play,
   Monitor,
   Wifi,
-  Signal
+  Signal,
+  Sparkles,
+  Zap,
+  Target,
+  RefreshCcw,
+  Volume2,
+  Bike,
+  Car,
+  BusFront,
+  Plane
 } from 'lucide-react';
-import { UserRole, RouteMode, VerificationStatus, OrderCluster } from '../types';
+import { UserRole, RouteMode, VerificationStatus, OrderCluster, VehicleType } from '../types';
 import { SimiAIService, decode, decodeAudioData, getOutputContext } from '../services/geminiService';
 import { ambientEngine } from '../services/ambientEngine';
+
+// Vehicle icon helper restored for dashboard
+const getDashVehicleIcon = (type: string, size: number = 24) => {
+  switch (type.toLowerCase()) {
+    case 'bike': return <Bike size={size} />;
+    case 'car': return <Car size={size} />;
+    case 'van':
+    case 'bus': return <BusFront size={size} />;
+    case 'truck': return <Truck size={size} />;
+    case 'plane': return <Plane size={size} />;
+    default: return <Signal size={size} />;
+  }
+};
 
 const gridFeed = [
   { 
     id: 'orient-1', 
     type: 'briefing', 
+    vehicleRequired: 'Signal',
     title: "Simi's Mission Briefing", 
     subtitle: "LIVE ORIENTATION NODE",
     content: "Oya, Pilot! Listen well well. I be Simi, your Area Manager. Whether you move Bike, Van, or Big Truck—I dey here to scan the grid for jobs wey go favor your pocket. No dulling!",
@@ -29,6 +52,7 @@ const gridFeed = [
   { 
     id: 'news-1', 
     type: 'trip', 
+    vehicleRequired: 'Truck',
     title: 'Road to Kano is Open', 
     subtitle: "LOGISTICS NODE ALPHA",
     content: 'Better job dey wait for long road. Pilots, oya move sharp-sharp! Money plenty for that axis.', 
@@ -37,18 +61,11 @@ const gridFeed = [
   { 
     id: 'news-2', 
     type: 'traffic', 
+    vehicleRequired: 'Car',
     title: 'Third Mainland Alert', 
     subtitle: "TRAFFIC INTERCEPT",
     content: 'Inward Island is tight o! Lagore reporting heavy hold-up. Use Carter Bridge or just chill small.', 
     image: 'https://images.unsplash.com/photo-1512428559083-a4979b2b51ef?auto=format&fit=crop&q=80&w=1200' 
-  },
-  {
-    id: 'orient-2',
-    type: 'briefing',
-    title: 'Global Agent Access',
-    subtitle: "AUTHORITY NODE v2",
-    content: "Global Agents, listen up! I go link you to international leads wey get weight—Courier or Travel, the Grid is yours.",
-    image: 'https://images.unsplash.com/photo-1449130015084-2d48a345ae62?auto=format&fit=crop&q=80&w=1200'
   }
 ];
 
@@ -58,11 +75,6 @@ interface DashboardProps {
   currentMode: RouteMode;
   vStatus?: VerificationStatus;
   activeMission?: OrderCluster | null;
-  targetDestination?: string;
-  activeManifest?: any;
-  onUpdateManifest?: (manifest: any) => void;
-  regLevels?: any[];
-  onUpdateMission?: (mission: any) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
@@ -116,184 +128,117 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const currentSignal = gridFeed[currentSignalIndex];
 
-  const navTabs = [
-    { id: 'orders', icon: PackageSearch, label: 'Job Board' },
-    { id: 'earnings', icon: Wallet, label: 'My Money' },
-    { id: 'community', icon: Users, label: 'Community' },
-    { id: 'registration-center', icon: ShieldCheck, label: 'Admin Papers' }
-  ];
-
   return (
-    <div className="flex flex-col p-4 md:p-10 gap-6 max-w-[1400px] mx-auto pb-40 text-left animate-in fade-in duration-700">
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide no-scrollbar">
-         {navTabs.map((tab) => (
-           <button 
-             key={tab.id} 
-             onClick={() => onNavigate(tab.id)}
-             className="flex items-center gap-2 px-4 py-2 bg-white/[0.03] border border-white/10 rounded-full whitespace-nowrap hover:bg-white/[0.08] transition-all"
-           >
-             <tab.icon size={12} className="text-[#E60000]" />
-             <span className="text-[9px] font-black uppercase tracking-widest text-white/60">{tab.label}</span>
-           </button>
-         ))}
-      </div>
+    <div className="flex flex-col p-4 md:p-10 gap-8 max-w-[1400px] mx-auto pb-40 text-left animate-in fade-in duration-700">
+      
+      {/* HERO: SIGNAL INTERCEPT (SIMI'S GIST) - RESPONSIVE FIX */}
+      <div className="relative w-full min-h-[420px] md:min-h-0 md:aspect-[21/9] bg-black rounded-[2.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl border-4 border-white/5 group flex flex-col justify-end">
+        <img 
+          src={currentSignal.image} 
+          className="absolute inset-0 w-full h-full object-cover opacity-40 grayscale group-hover:grayscale-0 group-hover:opacity-60 transition-all duration-[3s]" 
+          alt="Signal Background"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/20" />
+        <div className="absolute inset-0 pointer-events-none border-t border-white/10 animate-scanline" />
+        
+        <div className="absolute top-6 left-6 md:top-8 md:left-8 flex flex-wrap items-center gap-3">
+           <div className="px-4 py-1.5 bg-[#E60000] text-white text-[9px] font-black uppercase rounded-xl shadow-lg flex items-center gap-2">
+             <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" /> SIGNAL INTERCEPT
+           </div>
+           <div className="px-4 py-1.5 bg-black/40 backdrop-blur-md border border-white/10 text-white/40 text-[9px] font-black uppercase rounded-xl">
+             {currentSignal.subtitle}
+           </div>
+        </div>
 
-      <div className="relative w-full aspect-video md:aspect-[21/9] bg-[#0A0A0A] border-4 border-white/5 rounded-[3rem] overflow-hidden shadow-2xl group ring-1 ring-white/10">
-          <img 
-            key={currentSignal.id}
-            src={currentSignal.image} 
-            className="absolute inset-0 w-full h-full object-cover grayscale opacity-20 transition-all duration-[2s] group-hover:opacity-40" 
-            alt="Signal" 
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-          
-          <div className="absolute inset-0 pointer-events-none opacity-[0.03] overflow-hidden">
-             <div className="w-full h-full bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%]" />
-             <div className="absolute top-0 left-0 w-full h-1 bg-white/20 animate-scanline" />
-          </div>
-
-          <div className="absolute top-8 left-8 flex items-center gap-4 z-20">
-             <div className="px-4 py-1.5 bg-[#E60000] text-white text-[9px] font-black uppercase rounded-lg shadow-lg flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse shadow-[0_0_8px_#fff]" />
-                GRID SIGNAL {currentSignalIndex + 1}/{gridFeed.length}
-             </div>
-             <div className="px-4 py-1.5 bg-black/60 border border-white/10 backdrop-blur-md text-white/60 text-[9px] font-black uppercase rounded-lg flex items-center gap-2">
-                <Wifi size={10} className="text-emerald-500" /> SYNCED
-             </div>
-          </div>
-
-          <div className="absolute top-8 right-8 flex items-center gap-4 z-20 opacity-40">
-             <Signal size={16} />
-             <Activity size={16} className="text-[#E60000]" />
-          </div>
-
-          <div className="relative p-8 md:p-16 flex flex-col justify-end h-full z-10 space-y-6">
-             <div className="space-y-4 max-w-3xl">
-                <div className="flex items-center gap-3">
-                   <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]" />
-                   <span className="text-[10px] font-black uppercase text-emerald-500 tracking-[0.4em] italic">{currentSignal.subtitle}</span>
-                </div>
-                <h2 className="text-3xl md:text-6xl font-black text-white italic uppercase tracking-tighter leading-none display-font animate-in slide-in-from-left-4">
-                  {currentSignal.title}
-                </h2>
-                <p className="text-base md:text-xl font-bold text-white/50 italic leading-snug line-clamp-2 md:line-clamp-none">
-                  "{currentSignal.content}"
-                </p>
-             </div>
-
-             <div className="flex flex-wrap items-center gap-6 pt-6">
+        <div className="relative z-10 p-6 md:p-10 space-y-6">
+           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-12">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-8 text-left max-w-3xl">
                 <button 
                   onClick={playCurrentSignal}
-                  disabled={isPlaying}
-                  className={`group flex items-center gap-6 px-10 py-6 rounded-[2.5rem] font-black text-xl uppercase italic tracking-tighter transition-all ${isPlaying ? 'bg-white/5 text-white/20 border border-white/10' : 'bg-[#E60000] text-white shadow-[0_20px_50px_rgba(230,0,0,0.3)] hover:scale-105 active:scale-95'}`}
+                  className={`w-16 h-16 md:w-20 md:h-20 rounded-[1.5rem] md:rounded-[2rem] flex items-center justify-center transition-all shadow-2xl shrink-0 ${isPlaying ? 'bg-[#E60000] text-white animate-pulse' : 'bg-white text-black hover:scale-105 active:scale-95'}`}
                 >
-                   {isPlaying ? <Activity size={32} className="animate-pulse" /> : <Play fill="white" size={32} className="group-hover:rotate-12 transition-transform" />}
-                   {isPlaying ? 'SIGNAL SYNCING...' : 'SYNC SIGNAL'}
+                   {isPlaying ? <Volume2 size={32} /> : <Play fill="black" size={24} className="ml-0.5" />}
                 </button>
-                
-                <div className="hidden md:flex items-center gap-4 px-6 py-4 bg-white/5 rounded-full border border-white/5 backdrop-blur-sm">
-                   {gridFeed.map((_, idx) => (
-                     <div 
-                       key={idx} 
-                       className={`h-1.5 rounded-full transition-all duration-700 ${currentSignalIndex === idx ? 'w-8 bg-[#E60000]' : 'w-2 bg-white/10'}`} 
-                     />
-                   ))}
+                <div className="space-y-1">
+                   <p className="text-[9px] font-black text-[#E60000] uppercase tracking-[0.4em] italic">SIMI'S GIST</p>
+                   <h2 className="text-3xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-[0.9] display-font">{currentSignal.title}</h2>
+                   <p className="text-white/60 font-bold italic mt-3 text-sm md:text-base leading-relaxed line-clamp-2 md:line-clamp-none">{currentSignal.content}</p>
                 </div>
-             </div>
-          </div>
-          
-          <div className="absolute bottom-0 right-0 p-12 opacity-[0.03] pointer-events-none">
-             <Monitor size={300} className="text-white" />
-          </div>
+              </div>
+              <button 
+                onClick={() => onNavigate('community')}
+                className="w-full md:w-auto px-8 py-4 bg-white/10 backdrop-blur-xl border border-white/10 text-white rounded-[1.2rem] font-black text-[9px] uppercase tracking-widest hover:bg-white/20 transition-all flex items-center justify-center gap-2"
+              >
+                 <Users size={14} /> EXPLORE GRID FEED
+              </button>
+           </div>
+        </div>
       </div>
 
-      <div className="w-full bg-[#0A0A0A] border-4 border-white/5 rounded-[2rem] p-4 md:p-6 overflow-hidden relative">
-         <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 shrink-0">
-               <div className="w-2 h-2 bg-[#E60000] rounded-full animate-ping" />
-               <span className="text-[10px] font-black text-[#E60000] uppercase tracking-widest italic">NEURAL TICKER:</span>
+      {/* QUICK STATS HUB */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+         <div onClick={() => onNavigate('orders')} className="bg-[#0A0A0A] border-4 border-white/5 rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-8 text-left cursor-pointer hover:border-[#E60000]/20 transition-all group">
+            <div className="flex justify-between items-start mb-4 md:mb-6">
+               <div className="p-2.5 md:p-3 bg-[#E60000]/10 text-[#E60000] rounded-xl group-hover:scale-110 transition-transform"><PackageSearch size={20} /></div>
+               <span className="text-[8px] font-black text-emerald-500 uppercase italic">Live Jobs</span>
             </div>
-            <div className="flex-1 overflow-hidden">
-               <div className="flex items-center gap-12 animate-ticker whitespace-nowrap">
-                  {gridFeed.map((item) => (
-                    <div key={item.id} className="flex items-center gap-4">
-                       <span className="text-white/20">●</span>
-                       <span className="text-xs font-black text-white/60 uppercase italic tracking-widest">{item.title}</span>
-                    </div>
-                  ))}
-                  {gridFeed.map((item) => (
-                    <div key={item.id + '_dup'} className="flex items-center gap-4">
-                       <span className="text-white/20">●</span>
-                       <span className="text-xs font-black text-white/60 uppercase italic tracking-widest">{item.title}</span>
-                    </div>
-                  ))}
-               </div>
+            <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Market</p>
+            <p className="text-xl md:text-2xl font-black text-white italic tech-mono mt-1 leading-none">JOB BOARD</p>
+         </div>
+         <div onClick={() => onNavigate('earnings')} className="bg-[#0A0A0A] border-4 border-white/5 rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-8 text-left cursor-pointer hover:border-emerald-500/20 transition-all group">
+            <div className="flex justify-between items-start mb-4 md:mb-6">
+               <div className="p-2.5 md:p-3 bg-emerald-500/10 text-emerald-500 rounded-xl group-hover:scale-110 transition-transform"><Wallet size={20} /></div>
+               <span className="text-[8px] font-black text-emerald-500 uppercase italic">₦500</span>
             </div>
+            <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Wallet</p>
+            <p className="text-xl md:text-2xl font-black text-white italic tech-mono mt-1 leading-none">MY MONEY</p>
+         </div>
+         <div onClick={() => onNavigate('community')} className="bg-[#0A0A0A] border-4 border-white/5 rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-8 text-left cursor-pointer hover:border-blue-500/20 transition-all group">
+            <div className="flex justify-between items-start mb-4 md:mb-6">
+               <div className="p-2.5 md:p-3 bg-blue-500/10 text-blue-500 rounded-xl group-hover:scale-110 transition-transform"><Users size={20} /></div>
+               <span className="text-[8px] font-black text-blue-500 uppercase italic">2.4k Online</span>
+            </div>
+            <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Network</p>
+            <p className="text-xl md:text-2xl font-black text-white italic tech-mono mt-1 leading-none">THE GRID</p>
+         </div>
+         <div onClick={() => onNavigate('registration-center')} className="bg-[#0A0A0A] border-4 border-white/5 rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-8 text-left cursor-pointer hover:border-[#E60000]/20 transition-all group">
+            <div className="flex justify-between items-start mb-4 md:mb-6">
+               <div className="p-2.5 md:p-3 bg-white/5 text-white/30 rounded-xl group-hover:scale-110 transition-transform"><ShieldCheck size={20} /></div>
+               <span className="text-[8px] font-black text-white/20 uppercase italic">Level 4</span>
+            </div>
+            <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Papers</p>
+            <p className="text-xl md:text-2xl font-black text-white italic tech-mono mt-1 leading-none">VERIFIED</p>
          </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button 
-            onClick={() => onNavigate('workspace')}
-            className="group relative h-40 md:h-56 bg-[#0A0A0A] border-4 border-white/5 rounded-[3rem] p-8 flex flex-col justify-between overflow-hidden hover:border-[#25D366]/30 transition-all text-left shadow-2xl"
-          >
-             <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">
-                <Link2 size={120} />
-             </div>
-             <div className="space-y-2 relative z-10">
-                <div className="flex items-center gap-3">
-                   <div className="p-2 bg-[#25D366]/10 rounded-lg">
-                      <Link2 size={16} className="text-[#25D366]" />
+      {/* SIGNALS LISTING */}
+      <div className="space-y-6">
+        <div className="flex justify-between items-center px-2 md:px-4">
+           <h3 className="text-[9px] md:text-[10px] font-black text-white/20 uppercase tracking-[0.5em] italic">Recent Signals on Grid</h3>
+           <button className="text-[9px] font-black text-[#E60000] uppercase italic tracking-widest flex items-center gap-2">LIVE SYNC <RefreshCcw size={10} className="animate-spin" /></button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+           {gridFeed.map((item, idx) => (
+             <div 
+               key={item.id} 
+               onClick={() => setCurrentSignalIndex(idx)}
+               className={`p-6 md:p-8 bg-[#0A0A0A] border-4 rounded-[2.5rem] md:rounded-[3rem] transition-all cursor-pointer flex items-center gap-6 md:gap-8 group ${currentSignalIndex === idx ? 'border-[#E60000]/40 bg-[#E60000]/5' : 'border-white/5 hover:border-white/10'}`}
+             >
+                <div className="w-14 h-14 md:w-20 md:h-20 rounded-2xl overflow-hidden bg-white/5 flex items-center justify-center transition-all shrink-0">
+                   <div className={`text-white/20 group-hover:text-white transition-colors`}>
+                      {getDashVehicleIcon(item.vehicleRequired, 32)}
                    </div>
-                   <span className="text-[9px] font-black text-[#25D366] uppercase tracking-[0.2em] italic">Neural Bridge</span>
                 </div>
-                <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter leading-none">WhatsApp Link</h3>
-                <p className="text-xs font-bold text-white/30 uppercase mt-1 italic tracking-widest">Waka Node Sync</p>
-             </div>
-             <div className="flex items-center gap-2 text-[9px] font-black text-white/20 uppercase italic tracking-widest group-hover:text-white transition-all relative z-10">
-                OPEN TERMINAL <ChevronRight size={12} />
-             </div>
-          </button>
-
-          <button 
-            onClick={() => onNavigate('trips')}
-            className="group relative h-40 md:h-56 bg-[#0A0A0A] border-4 border-white/5 rounded-[3rem] p-8 flex flex-col justify-between overflow-hidden hover:border-blue-500/30 transition-all text-left shadow-2xl"
-          >
-             <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">
-                <Truck size={120} />
-             </div>
-             <div className="space-y-2 relative z-10">
-                <div className="flex items-center gap-3">
-                   <div className="p-2 bg-blue-500/10 rounded-lg">
-                      <Truck size={16} className="text-blue-500" />
-                   </div>
-                   <span className="text-[9px] font-black text-blue-500 uppercase tracking-[0.2em] italic">Waybill Broadcast</span>
+                <div className="text-left flex-1 min-w-0">
+                   <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1 truncate">{item.subtitle}</p>
+                   <h4 className="text-lg md:text-xl font-black text-white italic uppercase tracking-tighter leading-none truncate">{item.title}</h4>
                 </div>
-                <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter leading-none">Area FM</h3>
-                <p className="text-xs font-bold text-white/30 uppercase mt-1 italic tracking-widest">Trips & Manifest</p>
+                <ChevronRight size={20} className={currentSignalIndex === idx ? 'text-[#E60000]' : 'text-white/10'} />
              </div>
-             <div className="flex items-center gap-2 text-[9px] font-black text-white/20 uppercase italic tracking-widest group-hover:text-white transition-all relative z-10">
-                LAUNCH MANIFEST <ChevronRight size={12} />
-             </div>
-          </button>
+           ))}
+        </div>
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes scanline {
-          0% { transform: translateY(-100%); }
-          100% { transform: translateY(1000%); }
-        }
-        .animate-scanline {
-          animation: scanline 8s linear infinite;
-        }
-        @keyframes ticker {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-ticker {
-          animation: ticker 30s linear infinite;
-        }
-      `}} />
     </div>
   );
 };

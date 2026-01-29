@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Sidebar from './Sidebar';
 import Dashboard from './components/Dashboard';
@@ -25,7 +24,8 @@ import {
   MapPin, 
   Wallet, 
   UserCircle,
-  ShieldCheck
+  ShieldCheck,
+  Target
 } from 'lucide-react';
 import { 
   VehicleType, 
@@ -44,13 +44,11 @@ const App: React.FC = () => {
   const [userRole, setUserRole] = useState<UserRole>(UserRole.OPERATOR);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [viewedProfileId, setViewedProfileId] = useState<string | null>(null);
   
   const [isAudioInitialized, setIsAudioInitialized] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isRoleSyncing, setIsRoleSyncing] = useState(false);
 
-  // User is already registered and approved
   const [registrationLevels, setRegistrationLevels] = useState<RegistrationCategory[]>([
     RegistrationCategory.LOCAL,
     RegistrationCategory.INTERSTATE
@@ -61,8 +59,39 @@ const App: React.FC = () => {
   const [routeMode, setRouteMode] = useState<RouteMode>(RouteMode.ROAMING);
   const [destination, setDestination] = useState('');
   const [activeClusterMission, setActiveClusterMission] = useState<OrderCluster | null>(null);
+  
+  const [neuralPing, setNeuralPing] = useState<IncomingJob | null>(null);
 
   const simiRef = useRef(new SimiAIService());
+
+  // Background Scout for AreaGPT Neural Pings
+  useEffect(() => {
+    if (!isAudioInitialized) return;
+
+    const scoutInterval = setInterval(async () => {
+      // Small chance to find a high-yield lead while roaming
+      if (routeMode === RouteMode.ROAMING && Math.random() > 0.7 && !neuralPing) {
+        try {
+          const leads = await simiRef.current.scoutAreaGPTLeads();
+          if (leads.length > 0) {
+            const bestLead = leads[0];
+            const incoming: IncomingJob = {
+              id: bestLead.id,
+              vehicleType: selectedVehicle,
+              origin: bestLead.pickup,
+              destination: bestLead.destination,
+              price: bestLead.price,
+              serviceType: ServiceType.LOGISTICS,
+              category: RegistrationCategory.LOCAL
+            };
+            setNeuralPing(incoming);
+          }
+        } catch (e) {}
+      }
+    }, 45000);
+
+    return () => clearInterval(scoutInterval);
+  }, [isAudioInitialized, routeMode, selectedVehicle, neuralPing]);
 
   const handleInitAudio = async () => {
     setIsSyncing(true);
@@ -71,7 +100,7 @@ const App: React.FC = () => {
       const ctx = getOutputContext();
       if (ctx.state === 'suspended') await ctx.resume();
       
-      const audio = await simiRef.current.announceJob("Grid link set. Welcome back, Pilot Bakare. I dey stand by for you.");
+      const audio = await simiRef.current.announceJob("Grid link set. Welcome back, Pilot Bakare. AreaGPT is now online and scouting for missions.");
       if (audio) {
         const buffer = await decodeAudioData(decode(audio), ctx);
         const source = ctx.createBufferSource();
@@ -102,20 +131,21 @@ const App: React.FC = () => {
     setActiveTab('active-work');
   }, []);
 
-  const renderContent = () => {
-    if (activeTab === 'profile') {
-      return <UserProfileView 
-        profile={{
-          id: 'AL-PILOT-994', name: 'Tunde Bakare', avatar: 'https://picsum.photos/seed/driver7/200/200', role: userRole,
-          rating: 4.9, joinedDate: 'Feb 2024', bio: 'Elite Operator at Lagos-South Node.', services: [ServiceType.LOGISTICS],
-          stats: { totalTrips: 1242, completionRate: 98.5, reputation: 920 }, recentActivity: [],
-          registrationLevels: registrationLevels, verificationStatus: verificationStatus, activeVehicle: selectedVehicle
-        }} 
-        isOwnProfile={true} 
-        onBack={() => setActiveTab('dashboard')} 
-      />;
-    }
+  const handleAcceptPing = (job: IncomingJob) => {
+    const cluster: OrderCluster = {
+      id: `MISSION-${job.id}`,
+      name: `AI SNIPE: ${job.origin} to ${job.destination}`,
+      source: 'AreaGPT',
+      count: 1,
+      totalPrice: job.price,
+      efficiency: 100,
+      orders: [{ id: job.id, pickup: job.origin, dest: job.destination, price: job.price }]
+    };
+    handleEngageMission(cluster);
+    setNeuralPing(null);
+  };
 
+  const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard userRole={userRole} onNavigate={setActiveTab} currentMode={routeMode} activeMission={activeClusterMission} vStatus={verificationStatus} />;
       case 'workspace': return <Workspace activeVehicle={selectedVehicle} setVehicle={setSelectedVehicle} onNavigate={setActiveTab} userRole={userRole} routeMode={routeMode} setRouteMode={setRouteMode} destination={destination} setDestination={setDestination} regLevels={registrationLevels} setRegLevels={setRegistrationLevels} vStatus={verificationStatus} setVStatus={setVerificationStatus} />;
@@ -133,17 +163,20 @@ const App: React.FC = () => {
   if (!isAudioInitialized) {
     return (
       <div className="fixed inset-0 bg-[#020202] flex flex-col items-center justify-center p-10 text-center z-[500]">
-        <div className="w-32 h-32 md:w-40 md:h-40 bg-[#E60000]/10 border-4 border-[#E60000]/30 rounded-[3rem] flex items-center justify-center text-[#E60000] mb-8 animate-pulse shadow-2xl">
-          <Zap size={64} />
+        <div className="relative">
+          <div className="absolute inset-0 bg-[#E60000]/20 blur-3xl rounded-full animate-pulse" />
+          <div className="w-32 h-32 md:w-40 md:h-40 bg-[#0A0A0A] border-4 border-[#E60000]/30 rounded-[3rem] flex items-center justify-center text-[#E60000] mb-8 relative z-10 shadow-2xl">
+            <Zap size={64} className="animate-pulse" />
+          </div>
         </div>
         <h1 className="text-4xl font-black italic uppercase text-white tracking-tighter mb-4">AreaLine Neural</h1>
-        <p className="text-white/40 font-bold uppercase tracking-widest text-[10px] mb-8 italic">Establish Link to Current Grid</p>
+        <p className="text-white/40 font-bold uppercase tracking-widest text-[10px] mb-8 italic">Establish Link to AreaGPT & Grid</p>
         <button 
           onClick={handleInitAudio} 
           disabled={isSyncing}
           className="w-full max-w-xs py-6 bg-[#E60000] text-white rounded-2xl font-black text-lg uppercase italic tracking-tighter shadow-xl hover:scale-105 active:scale-95 transition-all"
         >
-          {isSyncing ? 'SYNCING...' : 'SYNC LINK'}
+          {isSyncing ? 'SYNCING GRID...' : 'SYNC LINK'}
         </button>
       </div>
     );
@@ -167,15 +200,15 @@ const App: React.FC = () => {
           </button>
           
           <div className="flex bg-white/[0.03] border border-white/10 p-1 rounded-full shadow-inner">
-             <button onClick={() => handleRoleSwitch(UserRole.OPERATOR)} className={`px-4 py-1.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase transition-all ${userRole === UserRole.OPERATOR ? 'bg-[#E60000] text-white' : 'text-white/20'}`}>
+             <button onClick={() => handleRoleSwitch(UserRole.OPERATOR)} className={`px-4 py-1.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase transition-all ${userRole === UserRole.OPERATOR ? 'bg-[#E60000] text-white shadow-lg' : 'text-white/20'}`}>
                 <User size={12} /> <span className="hidden xs:inline">Pilot</span>
              </button>
-             <button onClick={() => handleRoleSwitch(UserRole.AGENT)} className={`px-4 py-1.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase transition-all ${userRole === UserRole.AGENT ? 'bg-emerald-600 text-white' : 'text-white/20'}`}>
+             <button onClick={() => handleRoleSwitch(UserRole.AGENT)} className={`px-4 py-1.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase transition-all ${userRole === UserRole.AGENT ? 'bg-emerald-600 text-white shadow-lg' : 'text-white/20'}`}>
                 <Globe size={12} /> <span className="hidden xs:inline">Agent</span>
              </button>
           </div>
 
-          <div onClick={() => setActiveTab('earnings')} className="bg-white/5 px-4 py-2 rounded-full border border-white/10 flex items-center gap-2 cursor-pointer">
+          <div onClick={() => setActiveTab('earnings')} className="bg-white/5 px-4 py-2 rounded-full border border-white/10 flex items-center gap-2 cursor-pointer hover:bg-white/10 transition-all">
              <div className="w-5 h-5 bg-[#E60000] rounded-full flex items-center justify-center text-[10px] font-black italic shadow-lg">₦</div>
              <span className="tech-mono font-black text-xs md:text-sm">500</span>
           </div>
@@ -185,20 +218,26 @@ const App: React.FC = () => {
           {renderContent()}
         </div>
 
-        {/* MOBILE NAV */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-black/90 backdrop-blur-xl border-t border-white/10 z-40 flex justify-around items-center px-4">
-          {[
-            { id: 'dashboard', icon: Home, label: 'Gist' },
-            { id: 'orders', icon: PackageSearch, label: 'Board' },
-            { id: 'workspace', icon: MapPin, label: 'Waka' },
-            { id: 'registration-center', icon: ShieldCheck, label: 'Papers' }
-          ].map(item => (
-            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex flex-col items-center gap-1 ${activeTab === item.id ? 'text-[#E60000]' : 'text-white/20'}`}>
-              <item.icon size={22} />
-              <span className="text-[8px] font-black uppercase">{item.label}</span>
-            </button>
-          ))}
-        </nav>
+        {/* Neural Intercept Toast (Ping) */}
+        {neuralPing && (
+           <div className="fixed bottom-28 left-4 md:left-80 right-4 md:right-auto z-50 animate-in slide-in-from-left-10 duration-500">
+              <div className="bg-[#0A0A0A] border-2 border-amber-500/40 rounded-[2rem] p-6 md:w-96 shadow-[0_0_50px_rgba(245,158,11,0.2)] relative overflow-hidden flex items-center gap-6">
+                 <div className="absolute inset-0 bg-amber-500/5 animate-pulse" />
+                 <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center text-black shadow-xl shrink-0">
+                    <Target size={28} />
+                 </div>
+                 <div className="flex-1 text-left">
+                    <p className="text-[8px] font-black text-amber-500 uppercase tracking-widest mb-1 italic">AreaGPT Snipe</p>
+                    <h4 className="text-sm font-black text-white italic uppercase tracking-tight leading-none">₦{neuralPing.price.toLocaleString()}</h4>
+                    <p className="text-[10px] text-white/40 font-bold uppercase mt-1 truncate">{neuralPing.destination}</p>
+                 </div>
+                 <div className="flex flex-col gap-2">
+                    <button onClick={() => setNeuralPing(null)} className="p-2 hover:bg-white/10 rounded-lg text-white/20"><RefreshCcw size={14} /></button>
+                    <button onClick={() => handleAcceptPing(neuralPing)} className="p-3 bg-amber-500 text-black rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-all"><Zap size={20} /></button>
+                 </div>
+              </div>
+           </div>
+        )}
 
         <AIAssistant />
       </main>
