@@ -59,6 +59,7 @@ const App: React.FC = () => {
   const [routeMode, setRouteMode] = useState<RouteMode>(RouteMode.ROAMING);
   const [destination, setDestination] = useState('');
   const [activeClusterMission, setActiveClusterMission] = useState<OrderCluster | null>(null);
+  const [activeTrips, setActiveTrips] = useState<any[]>([]); // Tracks trips posted via Waybill
   
   const [neuralPing, setNeuralPing] = useState<IncomingJob | null>(null);
 
@@ -131,6 +132,19 @@ const App: React.FC = () => {
     setActiveTab('active-work');
   }, []);
 
+  const handleLaunchTrip = (manifest: any) => {
+    // Add the new manifest to the activeTrips array for broadcasting
+    const newTrip = {
+      ...manifest,
+      id: `TRIP-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+      pilotName: 'Pilot Bakare',
+      timestamp: new Date().toLocaleTimeString(),
+      vehicleType: selectedVehicle
+    };
+    setActiveTrips(prev => [newTrip, ...prev]);
+    setActiveTab('dashboard'); // Redirect to Gist to see the announcement
+  };
+
   const handleAcceptPing = (job: IncomingJob) => {
     const cluster: OrderCluster = {
       id: `MISSION-${job.id}`,
@@ -147,14 +161,14 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard': return <Dashboard userRole={userRole} onNavigate={setActiveTab} currentMode={routeMode} activeMission={activeClusterMission} vStatus={verificationStatus} />;
+      case 'dashboard': return <Dashboard userRole={userRole} onNavigate={setActiveTab} currentMode={routeMode} activeMission={activeClusterMission} vStatus={verificationStatus} activeTrips={activeTrips} />;
       case 'workspace': return <Workspace activeVehicle={selectedVehicle} setVehicle={setSelectedVehicle} onNavigate={setActiveTab} userRole={userRole} routeMode={routeMode} setRouteMode={setRouteMode} destination={destination} setDestination={setDestination} regLevels={registrationLevels} setRegLevels={setRegistrationLevels} vStatus={verificationStatus} setVStatus={setVerificationStatus} />;
       case 'orders': return <OrderClusters onNavigate={setActiveTab} onEngageCluster={handleEngageMission} vehicle={selectedVehicle} walletLocked={false} />;
       case 'active-work': return activeClusterMission ? <OngoingWork mission={activeClusterMission} onComplete={() => { setActiveClusterMission(null); setActiveTab('dashboard'); }} onCancel={() => { setActiveClusterMission(null); setActiveTab('dashboard'); }} onNavigate={setActiveTab} routeMode={routeMode} /> : <Dashboard userRole={userRole} onNavigate={setActiveTab} currentMode={routeMode} vStatus={verificationStatus} />;
-      case 'trips': return <TripPlanner onNavigate={setActiveTab} onLaunch={() => setActiveTab('dashboard')} activeTiers={registrationLevels} />;
+      case 'trips': return <TripPlanner onNavigate={setActiveTab} onLaunch={handleLaunchTrip} activeTiers={registrationLevels} currentVehicle={selectedVehicle} />;
       case 'fleet': return <MerchantPanel userRole={userRole} onNavigate={setActiveTab} />;
       case 'earnings': return <WalletPanel balance={500} onNavigate={setActiveTab} />;
-      case 'community': return <Community onNavigate={setActiveTab} />;
+      case 'community': return <Community onNavigate={setActiveTab} activeTrips={activeTrips} />;
       case 'registration-center': return <RegistrationCenter onNavigate={setActiveTab} onSuccess={(role, tiers) => { setUserRole(role); setRegistrationLevels(tiers); setVerificationStatus(VerificationStatus.APPROVED); setActiveTab('dashboard'); }} />;
       default: return <Dashboard userRole={userRole} onNavigate={setActiveTab} currentMode={routeMode} vStatus={verificationStatus} />;
     }

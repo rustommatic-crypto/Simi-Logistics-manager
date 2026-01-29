@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { 
   Truck, 
@@ -22,16 +21,17 @@ import {
   ShieldCheck,
   Coins
 } from 'lucide-react';
-import { TripType, RegistrationCategory } from '../types';
+import { TripType, RegistrationCategory, VehicleType } from '../types';
 import { SimiAIService, decode, decodeAudioData, getOutputContext } from '../services/geminiService';
 
 interface TripPlannerProps {
   onNavigate: (tab: string) => void;
   onLaunch: (manifest: any) => void;
   activeTiers: RegistrationCategory[];
+  currentVehicle?: VehicleType;
 }
 
-const TripPlanner: React.FC<TripPlannerProps> = ({ onNavigate, onLaunch, activeTiers }) => {
+const TripPlanner: React.FC<TripPlannerProps> = ({ onNavigate, onLaunch, activeTiers, currentVehicle }) => {
   const [step, setStep] = useState(1);
   const [tripType, setTripType] = useState<TripType>(TripType.PASSENGER);
   const [isInternational, setIsInternational] = useState(false);
@@ -72,7 +72,7 @@ const TripPlanner: React.FC<TripPlannerProps> = ({ onNavigate, onLaunch, activeT
     } catch(e) {}
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     const tripData = {
       tripType,
       origin,
@@ -81,11 +81,24 @@ const TripPlanner: React.FC<TripPlannerProps> = ({ onNavigate, onLaunch, activeT
       time,
       isInternational,
       currency,
-      type: tripType,
       remaining: tripType === TripType.PASSENGER ? availableSeats : remainingTonnage,
-      total: tripType === TripType.PASSENGER ? totalSeats : totalTonnage
+      total: tripType === TripType.PASSENGER ? totalSeats : totalTonnage,
+      vehicleType: currentVehicle
     };
     
+    // Announce the launch locally
+    try {
+      const audio = await simiRef.current.announceJob(`Oya, Pilot! Manifest locked for ${origin} to ${destination}. Simi is now broadcasting your available ${tripData.remaining} space to the grid. Safe trip o!`);
+      if (audio) {
+        const ctx = getOutputContext();
+        const buffer = await decodeAudioData(decode(audio), ctx);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start();
+      }
+    } catch (e) {}
+
     onLaunch(tripData);
   };
 

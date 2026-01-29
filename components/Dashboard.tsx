@@ -39,7 +39,7 @@ const getDashVehicleIcon = (type: string, size: number = 24) => {
   }
 };
 
-const gridFeed = [
+const staticGridFeed = [
   { 
     id: 'orient-1', 
     type: 'briefing', 
@@ -75,24 +75,41 @@ interface DashboardProps {
   currentMode: RouteMode;
   vStatus?: VerificationStatus;
   activeMission?: OrderCluster | null;
+  activeTrips?: any[];
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
-  onNavigate, currentMode, vStatus, activeMission
+  onNavigate, currentMode, vStatus, activeMission, activeTrips = []
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSignalIndex, setCurrentSignalIndex] = useState(0);
 
   const simi = useMemo(() => new SimiAIService(), []);
 
+  // Combine static feed with dynamic posted trips
+  const dynamicGridFeed = useMemo(() => {
+    const tripSignals = activeTrips.map(trip => ({
+      id: trip.id,
+      type: 'live_movement',
+      vehicleRequired: trip.vehicleType || 'Signal',
+      title: `${trip.origin} to ${trip.destination}`,
+      subtitle: `LIVE PILOT MOVEMENT`,
+      content: `Verification node locked. ${trip.pilotName} is en route with ${trip.remaining} ${trip.tripType === 'Passenger' ? 'seats' : 'tons'} available. AreaGPT is now matching customers.`,
+      image: trip.vehicleType === 'Truck' 
+        ? 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&q=80&w=1200'
+        : 'https://images.unsplash.com/photo-1545147422-51b27b456e09?auto=format&fit=crop&q=80&w=1200'
+    }));
+    return [...tripSignals, ...staticGridFeed];
+  }, [activeTrips]);
+
   useEffect(() => {
     const timer = setInterval(() => {
       if (!isPlaying) {
-        setCurrentSignalIndex(prev => (prev + 1) % gridFeed.length);
+        setCurrentSignalIndex(prev => (prev + 1) % dynamicGridFeed.length);
       }
     }, 12000);
     return () => clearInterval(timer);
-  }, [isPlaying]);
+  }, [isPlaying, dynamicGridFeed.length]);
 
   const playCurrentSignal = async () => {
     if (isPlaying) return;
@@ -100,8 +117,10 @@ const Dashboard: React.FC<DashboardProps> = ({
     if (ctx.state === 'suspended') await ctx.resume().catch(console.error);
     
     setIsPlaying(true);
-    const signal = gridFeed[currentSignalIndex];
-    const text = `Pilot, Signal Intercept: ${signal.title}. ${signal.content}`;
+    const signal = dynamicGridFeed[currentSignalIndex];
+    const text = signal.type === 'live_movement' 
+      ? `Pilot Bakare, your manifest for ${signal.title} is now live on the grid. Simi and AreaGPT are currently scouting for your ${signal.content.split(' ')[10]} passengers. No dulling!`
+      : `Pilot, Signal Intercept: ${signal.title}. ${signal.content}`;
 
     try {
       ambientEngine.pauseForVoice();
@@ -126,7 +145,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  const currentSignal = gridFeed[currentSignalIndex];
+  const currentSignal = dynamicGridFeed[currentSignalIndex];
 
   return (
     <div className="flex flex-col p-4 md:p-10 gap-8 max-w-[1400px] mx-auto pb-40 text-left animate-in fade-in duration-700">
@@ -142,8 +161,8 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="absolute inset-0 pointer-events-none border-t border-white/10 animate-scanline" />
         
         <div className="absolute top-6 left-6 md:top-8 md:left-8 flex flex-wrap items-center gap-3">
-           <div className="px-4 py-1.5 bg-[#E60000] text-white text-[9px] font-black uppercase rounded-xl shadow-lg flex items-center gap-2">
-             <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" /> SIGNAL INTERCEPT
+           <div className={`px-4 py-1.5 text-white text-[9px] font-black uppercase rounded-xl shadow-lg flex items-center gap-2 ${currentSignal.type === 'live_movement' ? 'bg-emerald-600' : 'bg-[#E60000]'}`}>
+             <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" /> {currentSignal.type === 'live_movement' ? 'LIVE NEURAL BROADCAST' : 'SIGNAL INTERCEPT'}
            </div>
            <div className="px-4 py-1.5 bg-black/40 backdrop-blur-md border border-white/10 text-white/40 text-[9px] font-black uppercase rounded-xl">
              {currentSignal.subtitle}
@@ -218,14 +237,14 @@ const Dashboard: React.FC<DashboardProps> = ({
            <button className="text-[9px] font-black text-[#E60000] uppercase italic tracking-widest flex items-center gap-2">LIVE SYNC <RefreshCcw size={10} className="animate-spin" /></button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-           {gridFeed.map((item, idx) => (
+           {dynamicGridFeed.map((item, idx) => (
              <div 
                key={item.id} 
                onClick={() => setCurrentSignalIndex(idx)}
                className={`p-6 md:p-8 bg-[#0A0A0A] border-4 rounded-[2.5rem] md:rounded-[3rem] transition-all cursor-pointer flex items-center gap-6 md:gap-8 group ${currentSignalIndex === idx ? 'border-[#E60000]/40 bg-[#E60000]/5' : 'border-white/5 hover:border-white/10'}`}
              >
-                <div className="w-14 h-14 md:w-20 md:h-20 rounded-2xl overflow-hidden bg-white/5 flex items-center justify-center transition-all shrink-0">
-                   <div className={`text-white/20 group-hover:text-white transition-colors`}>
+                <div className={`w-14 h-14 md:w-20 md:h-20 rounded-2xl overflow-hidden bg-white/5 flex items-center justify-center transition-all shrink-0 ${item.type === 'live_movement' ? 'border border-emerald-500/20' : ''}`}>
+                   <div className={`${item.type === 'live_movement' ? 'text-emerald-500' : 'text-white/20'} group-hover:text-white transition-colors`}>
                       {getDashVehicleIcon(item.vehicleRequired, 32)}
                    </div>
                 </div>
@@ -233,7 +252,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                    <p className="text-[8px] font-black text-white/20 uppercase tracking-widest mb-1 truncate">{item.subtitle}</p>
                    <h4 className="text-lg md:text-xl font-black text-white italic uppercase tracking-tighter leading-none truncate">{item.title}</h4>
                 </div>
-                <ChevronRight size={20} className={currentSignalIndex === idx ? 'text-[#E60000]' : 'text-white/10'} />
+                {item.type === 'live_movement' ? <Activity size={20} className="text-emerald-500 animate-pulse" /> : <ChevronRight size={20} className={currentSignalIndex === idx ? 'text-[#E60000]' : 'text-white/10'} />}
              </div>
            ))}
         </div>

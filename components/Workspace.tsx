@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Home,
   MapPin,
@@ -19,7 +19,10 @@ import {
   ArrowLeft,
   Link2,
   MessageSquare,
-  Cpu
+  Cpu,
+  Radar,
+  Crosshair,
+  Maximize2
 } from 'lucide-react';
 import { VehicleType, UserRole, RouteMode, RegistrationCategory, VerificationStatus } from '../types';
 import { SimiAIService, decode, decodeAudioData, getOutputContext } from '../services/geminiService';
@@ -46,7 +49,33 @@ const Workspace: React.FC<WorkspaceProps> = ({
 }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [showBridgeTerminal, setShowBridgeTerminal] = useState(false);
+  const [currentCoords, setCurrentCoords] = useState<{lat: number, lng: number} | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
   const simiService = useRef(new SimiAIService());
+
+  // Initialize Geolocation
+  const syncLocation = () => {
+    if (!navigator.geolocation) return;
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCurrentCoords({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        });
+        setIsLocating(false);
+      },
+      (err) => {
+        console.error("GPS Link Failure", err);
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
+  useEffect(() => {
+    syncLocation();
+  }, []);
 
   const handleModeChange = async (mode: RouteMode) => {
     setRouteMode(mode);
@@ -76,8 +105,19 @@ const Workspace: React.FC<WorkspaceProps> = ({
     }, 2000);
   };
 
+  // Construct Map URL based on mode and destination
+  const getMapUrl = () => {
+    if (routeMode === RouteMode.TRIP && destination.trim()) {
+      return `https://maps.google.com/maps?q=${encodeURIComponent(destination)}&t=k&z=13&ie=UTF8&iwloc=&output=embed`;
+    }
+    if (currentCoords) {
+      return `https://maps.google.com/maps?q=${currentCoords.lat},${currentCoords.lng}&t=k&z=16&ie=UTF8&iwloc=&output=embed`;
+    }
+    return `https://maps.google.com/maps?q=Lagos,Nigeria&t=k&z=10&ie=UTF8&iwloc=&output=embed`;
+  };
+
   return (
-    <div className="p-4 md:p-10 space-y-10 max-w-5xl mx-auto pb-40 animate-in fade-in duration-700 text-left">
+    <div className="p-4 md:p-10 space-y-10 max-w-6xl mx-auto pb-40 animate-in fade-in duration-700 text-left">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
         <div className="flex items-center gap-5">
           <button 
@@ -91,13 +131,69 @@ const Workspace: React.FC<WorkspaceProps> = ({
             <p className="text-white/30 font-bold italic text-[9px] mt-1 uppercase tracking-[0.3em] leading-none">Vehicle & Node Control</p>
           </div>
         </div>
-        <button 
-          onClick={handleWASync}
-          className="w-full md:w-auto px-6 py-3 bg-[#25D366]/80 text-white rounded-xl font-black text-[10px] uppercase tracking-widest italic flex items-center justify-center gap-3 shadow-xl transition-all hover:scale-105 active:scale-95 border border-white/10"
-        >
-          {isSyncing ? <RefreshCcw size={14} className="animate-spin" /> : <Terminal size={14} />} 
-          WHATSAPP SYNC
-        </button>
+        <div className="flex gap-4">
+          <button 
+            onClick={syncLocation}
+            disabled={isLocating}
+            className="p-4 bg-white/5 border border-white/10 rounded-xl text-white/40 hover:text-white transition-all flex items-center gap-2"
+          >
+            <RefreshCcw size={16} className={isLocating ? "animate-spin text-[#E60000]" : ""} />
+            <span className="text-[10px] font-black uppercase italic tracking-widest hidden sm:inline">RELINK GPS</span>
+          </button>
+          <button 
+            onClick={handleWASync}
+            className="w-full md:w-auto px-6 py-3 bg-[#25D366]/80 text-white rounded-xl font-black text-[10px] uppercase tracking-widest italic flex items-center justify-center gap-3 shadow-xl transition-all hover:scale-105 active:scale-95 border border-white/10"
+          >
+            {isSyncing ? <RefreshCcw size={14} className="animate-spin" /> : <Terminal size={14} />} 
+            WHATSAPP SYNC
+          </button>
+        </div>
+      </div>
+
+      {/* NEURAL RADAR MAP SECTION */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-12">
+          <div className="bg-[#0A0A0A] border-4 border-emerald-500/20 rounded-[3rem] overflow-hidden shadow-2xl relative">
+            {/* Map UI Overlay */}
+            <div className="absolute top-6 left-6 z-10 flex flex-col gap-3">
+              <div className="px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-xl flex items-center gap-3">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                <span className="text-[9px] font-black text-white uppercase tracking-widest italic">
+                  {routeMode === RouteMode.TRIP ? 'MISSION TARGET LOCKED' : 'NEURAL GPS ACTIVE'}
+                </span>
+              </div>
+              {currentCoords && (
+                <div className="px-4 py-2 bg-black/40 backdrop-blur-md border border-white/5 rounded-xl">
+                  <p className="text-[8px] font-black text-white/30 uppercase tracking-widest mb-0.5">Telemetry</p>
+                  <p className="text-[10px] font-black text-emerald-500 tech-mono">{currentCoords.lat.toFixed(4)}°N, {currentCoords.lng.toFixed(4)}°E</p>
+                </div>
+              )}
+            </div>
+
+            <div className="absolute bottom-6 right-6 z-10">
+               <div className="w-12 h-12 bg-[#E60000] rounded-xl flex items-center justify-center text-white shadow-2xl animate-pulse">
+                  <Radar size={24} />
+               </div>
+            </div>
+
+            {/* Scanning Scanline Animation */}
+            <div className="absolute inset-0 pointer-events-none border-t border-emerald-500/10 animate-scan-slow z-10" />
+
+            {/* The Map Embed */}
+            <div className="w-full aspect-[21/9] bg-[#020202]">
+              <iframe 
+                width="100%" 
+                height="100%" 
+                frameBorder="0" 
+                scrolling="no" 
+                marginHeight={0} 
+                marginWidth={0} 
+                src={getMapUrl()}
+                className="grayscale opacity-60 contrast-125"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       {showBridgeTerminal && (
@@ -230,7 +326,7 @@ const Workspace: React.FC<WorkspaceProps> = ({
                  </div>
                  <div className="flex justify-between items-center py-4">
                     <span className="text-[10px] font-black text-white/20 uppercase italic">Gps Node</span>
-                    <span className="text-[9px] font-black text-white/60 uppercase italic">Active</span>
+                    <span className="text-[9px] font-black text-white/60 uppercase italic">{currentCoords ? 'Active' : 'Searching...'}</span>
                  </div>
               </div>
            </div>

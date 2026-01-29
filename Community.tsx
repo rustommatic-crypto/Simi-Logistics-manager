@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { 
   MessageCircle, 
   Send, 
@@ -17,15 +17,37 @@ import {
   Home,
   RefreshCcw,
   Activity,
-  ChevronRight
+  ChevronRight,
+  Target,
+  MapPin,
+  Package,
+  Bike,
+  Truck,
+  BusFront,
+  Signal,
+  Globe,
+  Cpu,
+  Radar
 } from 'lucide-react';
-import { CommunityPost, ChatMessage } from './types';
+import { CommunityPost, ChatMessage, VehicleType } from './types';
 import { SimiAIService, decode, decodeAudioData, getOutputContext } from './services/geminiService';
 
 interface CommunityProps {
   onViewProfile?: (id: string) => void;
   onNavigate?: (tab: string) => void;
+  activeTrips?: any[];
 }
+
+const getVehicleIcon = (type: string | VehicleType, size: number = 24) => {
+  const t = typeof type === 'string' ? type.toLowerCase() : type;
+  switch (t) {
+    case 'bike': return <Bike size={size} />;
+    case 'van':
+    case 'bus': return <BusFront size={size} />;
+    case 'truck': return <Truck size={size} />;
+    default: return <Package size={size} />;
+  }
+};
 
 const mockPosts: CommunityPost[] = [
   { id: '1', user: 'Baba Tunde', userId: 'u1', content: 'Safe journey everyone! My truck is moving for Abuja now with some extra space.', time: '2 mins ago', likes: 12, comments: 2, mediaUrl: 'https://images.unsplash.com/photo-1586191582151-f746313d3013?auto=format&fit=crop&q=80&w=800', mediaType: 'image' },
@@ -38,8 +60,8 @@ const mockPrivateChats: ChatMessage[] = [
   { id: 'm2', senderId: 'me', senderName: 'Me', text: 'Yes, I have small space left. You have goods?', time: '10:05 AM', isMe: true },
 ];
 
-const Community: React.FC<CommunityProps> = ({ onViewProfile, onNavigate }) => {
-  const [view, setView] = useState<'public' | 'private'>('public');
+const Community: React.FC<CommunityProps> = ({ onViewProfile, onNavigate, activeTrips = [] }) => {
+  const [view, setView] = useState<'grid' | 'public' | 'private'>('grid');
   const [showPostModal, setShowPostModal] = useState(false);
   const [showBroadcast, setShowBroadcast] = useState(false);
   const [isSyncingBroadcast, setIsSyncingBroadcast] = useState(false);
@@ -80,10 +102,111 @@ const Community: React.FC<CommunityProps> = ({ onViewProfile, onNavigate }) => {
     setIsSyncingBroadcast(false);
   };
 
+  const renderGridFeed = () => (
+    <div className="space-y-8 animate-in slide-in-from-bottom-6 duration-700">
+      {/* Grid Status Header */}
+      <div className="bg-[#0A0A0A] border-4 border-emerald-500/20 rounded-[3rem] p-10 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-10 opacity-[0.03]">
+          <Radar size={180} className="text-emerald-500 animate-spin-slow" />
+        </div>
+        <div className="flex items-center gap-8 relative z-10">
+          <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/30 rounded-[1.5rem] flex items-center justify-center text-emerald-500 shadow-2xl">
+            <Cpu size={40} className="animate-pulse" />
+          </div>
+          <div className="text-left">
+            <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Live Neural Grid</h2>
+            <p className="text-emerald-500 font-black text-[10px] uppercase tracking-[0.4em] italic mt-1 leading-none">Scanning {activeTrips.length + 42} Active Movement Nodes</p>
+          </div>
+        </div>
+        <div className="px-8 py-4 bg-black/60 border border-white/5 rounded-2xl flex items-center gap-4 relative z-10">
+          <div className="text-right">
+             <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Global Demand</p>
+             <p className="text-xl font-black text-white tech-mono italic leading-none mt-1">HIGH (88%)</p>
+          </div>
+          <Activity size={24} className="text-emerald-500 animate-pulse" />
+        </div>
+      </div>
+
+      {activeTrips.length === 0 ? (
+        <div className="py-24 text-center space-y-6 bg-white/[0.02] border border-white/5 border-dashed rounded-[4rem]">
+           <Signal size={64} className="text-white/10 mx-auto animate-pulse" />
+           <div>
+              <h3 className="text-2xl font-black text-white/40 uppercase italic">Grid is Silent</h3>
+              <p className="text-white/20 text-xs font-bold mt-2 italic">No movement nodes detected in your sector. Sync a waybill to broadcast.</p>
+           </div>
+           <button onClick={() => onNavigate?.('trips')} className="px-10 py-4 bg-[#E60000] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest italic shadow-xl">POST WAYBILL</button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6">
+          {activeTrips.map((trip) => (
+            <div key={trip.id} className="p-8 bg-[#0A0A0A] border-4 border-emerald-500/20 rounded-[3rem] space-y-8 shadow-2xl relative overflow-hidden transition-all hover:border-emerald-500/40 group">
+               <div className="absolute top-0 right-0 p-10 opacity-[0.02] group-hover:scale-110 transition-transform">
+                  {getVehicleIcon(trip.vehicleType, 120)}
+               </div>
+               
+               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+                  <div className="flex items-center gap-6">
+                     <div className="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-xl">
+                        <Target size={32} />
+                     </div>
+                     <div className="text-left">
+                        <p className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.4em] mb-1 italic leading-none">Movement Intercept</p>
+                        <h3 className="text-3xl font-black text-white italic uppercase tracking-tighter leading-none">{trip.origin} <span className="text-white/20">to</span> {trip.destination}</h3>
+                     </div>
+                  </div>
+                  <div className="flex flex-col md:items-end">
+                     <div className="px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[9px] font-black text-emerald-500 uppercase italic flex items-center gap-2">
+                        <Activity size={10} className="animate-pulse" /> AREAGPT SYNCED
+                     </div>
+                     <p className="text-[10px] text-white/30 font-bold uppercase mt-2 tracking-widest">{trip.timestamp}</p>
+                  </div>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+                  <div className="p-6 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center gap-6">
+                     <div className="p-3 bg-white/5 rounded-xl text-white/40">
+                        {getVehicleIcon(trip.vehicleType, 24)}
+                     </div>
+                     <div className="text-left">
+                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Space</p>
+                        <p className="text-xl font-black text-white tech-mono italic">{trip.remaining} {trip.tripType === 'Passenger' ? 'SEATS' : 'TONS'}</p>
+                     </div>
+                  </div>
+                  <div className="p-6 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center gap-6">
+                     <div className="p-3 bg-white/5 rounded-xl text-white/40">
+                        <Users size={24} />
+                     </div>
+                     <div className="text-left">
+                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Inquiries</p>
+                        <p className="text-xl font-black text-emerald-500 tech-mono italic">3 MATCHING</p>
+                     </div>
+                  </div>
+                  <div className="p-6 bg-white/[0.03] border border-white/5 rounded-2xl flex items-center gap-6">
+                     <div className="p-3 bg-white/5 rounded-xl text-white/40">
+                        <Globe size={24} />
+                     </div>
+                     <div className="text-left">
+                        <p className="text-[8px] font-black text-white/20 uppercase tracking-widest">Status</p>
+                        <p className="text-xl font-black text-white italic uppercase tracking-tighter">{trip.isInternational ? 'CROSS BORDER' : 'INTERSTATE'}</p>
+                     </div>
+                  </div>
+               </div>
+
+               <div className="flex gap-4 relative z-10">
+                  <button className="flex-1 py-5 bg-emerald-600 text-white rounded-[1.5rem] font-black text-[11px] uppercase tracking-widest italic shadow-xl hover:scale-105 transition-all">MANAGE MANIFEST</button>
+                  <button className="flex-1 py-5 bg-white/5 border border-white/10 text-white/40 rounded-[1.5rem] font-black text-[11px] uppercase tracking-widest italic hover:text-white transition-all">GRID TELEMETRY</button>
+               </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   const renderPublicFeed = () => (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in slide-in-from-bottom-6 duration-700">
       {mockPosts.map((post) => (
-        <div key={post.id} className={`neural-card p-6 md:p-8 space-y-6 overflow-hidden transition-all hover:border-white/10 ${post.isJobOrder ? 'border-[#E60000]/40 bg-[#E60000]/5' : 'bg-white/[0.02]'}`}>
+        <div key={post.id} className={`p-6 md:p-8 space-y-6 overflow-hidden transition-all hover:border-white/10 rounded-[3rem] border-2 ${post.isJobOrder ? 'border-[#E60000]/40 bg-[#E60000]/5' : 'bg-white/[0.02] border-white/5'}`}>
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4 cursor-pointer" onClick={() => onViewProfile?.(post.userId)}>
               <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center font-black text-white border border-white/5 uppercase italic">
@@ -147,7 +270,7 @@ const Community: React.FC<CommunityProps> = ({ onViewProfile, onNavigate }) => {
   const renderPrivateChats = () => {
     if (activePrivateChat) {
       return (
-        <div className="neural-card flex flex-col h-[550px] overflow-hidden bg-black/20 border-white/5">
+        <div className="neural-card flex flex-col h-[550px] overflow-hidden bg-black/20 border-white/5 animate-in slide-in-from-right-6">
           <div className="p-6 bg-white/[0.03] border-b border-white/5 flex items-center justify-between">
             <div className="flex items-center gap-4">
                <button onClick={() => setActivePrivateChat(null)} className="p-2 hover:bg-white/10 rounded-lg text-white/40"><X size={20} /></button>
@@ -185,7 +308,7 @@ const Community: React.FC<CommunityProps> = ({ onViewProfile, onNavigate }) => {
     }
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 animate-in slide-in-from-bottom-6">
         {['Musa Driver', 'Sarah Keke', 'John Truck'].map((name, i) => (
           <div 
             key={i} 
@@ -222,9 +345,9 @@ const Community: React.FC<CommunityProps> = ({ onViewProfile, onNavigate }) => {
           >
             <ArrowLeft size={20} />
           </button>
-          <div className="hidden sm:block">
-            <h1 className="text-2xl font-black italic uppercase display-font tracking-tighter text-white">Community</h1>
-            <p className="text-[8px] font-black text-[#E60000] uppercase tracking-widest leading-none mt-1">Global Interaction Node</p>
+          <div className="hidden sm:block text-left">
+            <h1 className="text-2xl font-black italic uppercase display-font tracking-tighter text-white">The Grid Feed</h1>
+            <p className="text-[8px] font-black text-[#E60000] uppercase tracking-widest leading-none mt-1">Live Interaction Node</p>
           </div>
         </div>
         <button 
@@ -235,57 +358,30 @@ const Community: React.FC<CommunityProps> = ({ onViewProfile, onNavigate }) => {
         </button>
       </div>
 
-      {/* TV HEADER SCREEN */}
-      <div className="relative w-full aspect-video md:aspect-[21/9] bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/5 group">
-        <img 
-          src="https://images.unsplash.com/photo-1449130015084-2d48a345ae62?auto=format&fit=crop&q=80&w=1200" 
-          className="w-full h-full object-cover opacity-40 grayscale group-hover:grayscale-0 group-hover:opacity-60 transition-all duration-[3s]" 
-          alt="Shared View"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/20" />
-        
-        {/* LIVE BADGE */}
-        <div className="absolute top-6 left-6 flex flex-col gap-2">
-           <div className="px-4 py-1.5 bg-[#E60000] text-white text-[9px] font-black uppercase rounded-lg shadow-lg flex items-center gap-2">
-             <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" /> BROADCAST NODE
-           </div>
-        </div>
-
-        <div className="absolute bottom-6 left-6 right-6">
-           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-center gap-5 text-left">
-                <div className="w-16 h-16 bg-white/[0.05] border border-white/10 backdrop-blur-xl rounded-[1.2rem] flex items-center justify-center text-white shadow-2xl transition-all group-hover:bg-[#E60000]">
-                   <Play fill="white" size={24} className="ml-1" />
-                </div>
-                <div>
-                   <p className="text-[8px] font-black text-[#E60000] uppercase tracking-widest mb-1">Trending Gist</p>
-                   <h2 className="text-xl md:text-3xl font-black text-white italic uppercase tracking-tighter leading-none display-font">"Road is clear toward Maryland"</h2>
-                </div>
-              </div>
-              <button onClick={handleWatchBroadcast} className="px-8 py-4 bg-white text-black font-black text-[10px] uppercase rounded-xl shadow-xl hover:scale-105 transition-all tracking-widest">
-                 WATCH LIVE
-              </button>
-           </div>
-        </div>
-      </div>
-
       {/* TABS & FEED */}
       <div className="space-y-8">
         <div className="flex bg-white/[0.03] p-1.5 rounded-2xl border border-white/5 shadow-inner w-full sm:w-fit">
           <button 
+            onClick={() => setView('grid')}
+            className={`flex-1 sm:flex-none px-8 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${view === 'grid' ? 'bg-emerald-600 text-white shadow-xl' : 'text-white/20'}`}
+          >
+            <Radar size={16} /> Live Grid
+          </button>
+          <button 
             onClick={() => setView('public')}
             className={`flex-1 sm:flex-none px-8 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${view === 'public' ? 'bg-white/10 text-white shadow-xl' : 'text-white/20'}`}
           >
-            <Users size={16} /> Public Feed
+            <Signal size={16} /> Public Gist
           </button>
           <button 
             onClick={() => setView('private')}
             className={`flex-1 sm:flex-none px-8 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-2 ${view === 'private' ? 'bg-white/10 text-white shadow-xl' : 'text-white/20'}`}
           >
-            <MessageCircle size={16} /> Private
+            <MessageCircle size={16} /> Handshakes
           </button>
         </div>
-        {view === 'public' ? renderPublicFeed() : renderPrivateChats()}
+        
+        {view === 'grid' ? renderGridFeed() : view === 'public' ? renderPublicFeed() : renderPrivateChats()}
       </div>
 
       {/* NEURAL BROADCAST MODAL */}
@@ -300,7 +396,7 @@ const Community: React.FC<CommunityProps> = ({ onViewProfile, onNavigate }) => {
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60" />
               <div className="absolute inset-0 pointer-events-none border-t border-[#E60000]/20 animate-scan-slow" />
               
-              <div className="absolute top-8 left-8 right-8 flex justify-between items-start">
+              <div className="absolute top-8 left-8 right-8 flex justify-between items-start text-left">
                  <div className="space-y-1">
                     <div className="px-4 py-1.5 bg-[#E60000] text-white text-[8px] font-black uppercase rounded-lg shadow-lg flex items-center gap-2">
                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" /> LIVE TELEMETRY
@@ -316,12 +412,12 @@ const Community: React.FC<CommunityProps> = ({ onViewProfile, onNavigate }) => {
               </div>
 
               <div className="absolute bottom-8 left-8 right-8">
-                 <div className="bg-white/[0.05] backdrop-blur-3xl border border-white/10 p-8 rounded-[2.5rem] flex items-center gap-6">
+                 <div className="bg-white/[0.05] backdrop-blur-3xl border border-white/10 p-8 rounded-[2.5rem] flex items-center gap-6 text-left">
                     <div className="w-14 h-14 bg-[#E60000]/20 border border-[#E60000]/40 rounded-xl flex items-center justify-center text-[#E60000] shadow-2xl animate-pulse">
                        <Activity size={24} />
                     </div>
                     <div className="text-left flex-1">
-                       <p className="text-[8px] font-black text-[#E60000] uppercase tracking-[0.4em] mb-1">Simi Intelligence</p>
+                       <p className="text-[8px] font-black text-[#E60000] uppercase tracking-[0.4em] mb-1 leading-none">Simi Intelligence</p>
                        <p className="text-lg font-bold text-white italic leading-snug">"Maryland set, no dulling. But Ojota inward hold-up don start o. Avoid am if you fit."</p>
                     </div>
                  </div>
@@ -350,7 +446,7 @@ const Community: React.FC<CommunityProps> = ({ onViewProfile, onNavigate }) => {
       {/* POST MODAL */}
       {showPostModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
-           <div className="bg-[#0A0A0A] w-full max-w-xl rounded-[3rem] p-10 space-y-8 animate-in zoom-in duration-300 shadow-2xl border border-white/10">
+           <div className="bg-[#0A0A0A] w-full max-w-xl rounded-[3rem] p-10 space-y-8 animate-in zoom-in duration-300 shadow-2xl border border-white/10 text-left">
               <div className="flex justify-between items-center">
                  <h2 className="text-3xl font-black italic uppercase display-font tracking-tighter text-white">New Post</h2>
                  <button onClick={() => setShowPostModal(false)} className="p-3 bg-white/5 text-white/20 hover:text-white rounded-2xl"><X size={24} /></button>
