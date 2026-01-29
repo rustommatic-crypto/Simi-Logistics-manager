@@ -48,9 +48,6 @@ const OrderClusters: React.FC<OrderClustersProps> = ({
 }) => {
   const [hasSearched, setHasSearched] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [negotiationCluster, setNegotiationCluster] = useState<any | null>(null);
-  const [bidValue, setBidValue] = useState<number>(0);
-  const [simiMessage, setSimiMessage] = useState("");
   const simiService = useRef(new SimiAIService());
 
   const mockClusters = [
@@ -134,11 +131,11 @@ const OrderClusters: React.FC<OrderClustersProps> = ({
       {isSyncing && (
         <div className="fixed inset-0 z-[300] bg-black/95 backdrop-blur-3xl flex flex-col items-center justify-center p-12 space-y-12">
            <RefreshCcw size={80} className="text-[#E60000] animate-spin" />
-           <div className="bg-[#0A0A0A] border border-white/10 p-12 rounded-[3.5rem] space-y-5 h-64 overflow-hidden relative shadow-2xl w-full max-w-xl">
-              <p className="text-[11px] text-white/30 italic">{" >> HANDSHAKE: WhatsApp Bridge v2.1"}</p>
-              <p className="text-[11px] text-[#25D366] italic">{" >> INTERCEPTING 3 NEW MESSAGES FROM 'LAGOS TRUCKERS' GROUP"}</p>
-              <p className="text-[11px] text-white/30 italic">{" >> Simi AI: Extracting coordinates..."}</p>
-              <p className="text-[11px] text-[#E60000] italic">{" >> CLUSTER BUNDLES READY."}</p>
+           <div className="bg-[#0A0A0A] border border-white/10 p-12 rounded-[3.5rem] space-y-5 h-64 overflow-hidden relative shadow-2xl w-full max-w-xl text-left">
+              <p className="text-[11px] text-white/30 italic">&gt;&gt; HANDSHAKE: WhatsApp Bridge v2.1</p>
+              <p className="text-[11px] text-[#25D366] italic">&gt;&gt; INTERCEPTING 3 NEW MESSAGES FROM 'LAGOS TRUCKERS' GROUP</p>
+              <p className="text-[11px] text-white/30 italic">&gt;&gt; Simi AI: Extracting coordinates...</p>
+              <p className="text-[11px] text-[#E60000] italic">&gt;&gt; CLUSTER BUNDLES READY.</p>
            </div>
         </div>
       )}
@@ -149,7 +146,7 @@ const OrderClusters: React.FC<OrderClustersProps> = ({
             {mockClusters.map((cluster) => (
               <div key={cluster.id} className={`bg-[#0A0A0A] border-4 rounded-[4rem] p-12 md:p-16 space-y-12 shadow-2xl relative overflow-hidden group transition-all ${cluster.source === 'WhatsApp' ? 'border-[#25D366]/20' : 'border-white/5'}`}>
                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-12">
-                    <div className="flex items-center gap-10">
+                    <div className="flex items-center gap-10 text-left">
                        <div className={`w-28 h-28 rounded-[3rem] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform ${cluster.source === 'WhatsApp' ? 'bg-[#25D366]/10 text-[#25D366]' : 'bg-[#E60000]/10 text-[#E60000]'}`}>
                           {cluster.source === 'WhatsApp' ? <Link2 size={56} /> : getVehicleIcon(vehicle, 56)}
                        </div>

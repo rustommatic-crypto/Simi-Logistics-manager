@@ -1,25 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Star, 
   MapPin, 
-  Calendar, 
-  Award, 
-  TrendingUp, 
-  CheckCircle2, 
-  MessageSquare, 
-  Truck, 
-  ShieldCheck,
-  ChevronRight,
-  User,
-  Activity,
-  ArrowLeft,
-  Share2,
-  Info,
-  Lock,
-  Globe,
-  Package,
-  // Added Zap to imports
-  Zap
+  ShieldCheck, 
+  Activity, 
+  ArrowLeft, 
+  Share2, 
+  Globe, 
+  Package, 
+  Zap,
+  Truck,
+  CheckCircle2,
+  TrendingUp,
+  Loader2
 } from 'lucide-react';
 import { UserProfile, RegistrationCategory } from '../types';
 
@@ -30,25 +23,89 @@ interface UserProfileViewProps {
 }
 
 const UserProfileView: React.FC<UserProfileViewProps> = ({ profile, onBack, isOwnProfile }) => {
+  const [location, setLocation] = useState<string | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Simi: Pilot, your browser no support GPS node tracking!");
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setLocation(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        setIsLocating(false);
+      },
+      (error) => {
+        console.error("GPS Intercept Error:", error);
+        setIsLocating(false);
+        alert("Simi: I no fit lock your location node. Check your permissions!");
+      }
+    );
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: 'AreaLine Pilot Profile',
+        text: `Check out Pilot ${profile.name} on AreaLine.`,
+        url: window.location.href,
+      }).catch(() => {});
+    } else {
+      alert("Profile link copied to grid!");
+    }
+  };
+
   return (
     <div className="p-4 md:p-10 space-y-10 pb-40 animate-in fade-in duration-500 max-w-6xl mx-auto">
-      {/* Header Navigation */}
-      <div className="flex items-center gap-6">
-        {onBack && (
+      {/* Header Navigation & Actions */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="flex items-center gap-6">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="p-4 bg-white/5 border border-white/10 rounded-2xl text-white/40 hover:text-white transition-all shadow-xl"
+            >
+              <ArrowLeft size={24} />
+            </button>
+          )}
+          <div className="text-left">
+            <h1 className="text-4xl font-black text-white uppercase tracking-tighter display-font italic">
+              {isOwnProfile ? 'Pilot Console' : 'Operator Record'}
+            </h1>
+            <p className="text-[#E60000] font-black text-[10px] uppercase tracking-[0.4em] italic mt-1">
+              Verified AreaLine Operator
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
           <button 
-            onClick={onBack}
-            className="p-4 bg-white/5 border border-white/10 rounded-2xl text-white/40 hover:text-white transition-all"
+            onClick={handleShare}
+            className="p-4 bg-white/5 border border-white/10 rounded-2xl text-white/40 hover:text-white transition-all flex items-center gap-2 group shadow-lg"
+            title="Share Profile"
           >
-            <ArrowLeft size={24} />
+            <Share2 size={24} className="group-hover:scale-110 transition-transform" />
           </button>
-        )}
-        <div>
-          <h1 className="text-4xl font-black text-white uppercase tracking-tighter display-font italic">
-            {isOwnProfile ? 'Pilot Console' : 'Operator Record'}
-          </h1>
-          <p className="text-[#E60000] font-black text-[10px] uppercase tracking-[0.4em] italic mt-1">
-            Verified AreaLine Operator
-          </p>
+          
+          <button 
+            onClick={handleGetLocation}
+            disabled={isLocating}
+            className={`p-4 bg-white/5 border border-white/10 rounded-2xl transition-all flex items-center gap-3 shadow-lg group ${location ? 'border-emerald-500/30' : ''}`}
+            title="Locate GPS Node"
+          >
+            <MapPin size={24} className={location ? "text-emerald-500" : "text-white/40 group-hover:text-white"} />
+            {isLocating && <Loader2 size={16} className="animate-spin text-[#E60000]" />}
+            {location && (
+              <div className="text-left">
+                <p className="text-[8px] font-black text-emerald-500 uppercase tracking-widest leading-none mb-1">Grid Lock</p>
+                <p className="text-[10px] font-black text-white italic tech-mono">{location}</p>
+              </div>
+            )}
+            {!location && !isLocating && <span className="hidden md:inline text-[9px] font-black text-white/20 uppercase tracking-widest italic group-hover:text-white/40">Sync GPS</span>}
+          </button>
         </div>
       </div>
 
@@ -106,13 +163,13 @@ const UserProfileView: React.FC<UserProfileViewProps> = ({ profile, onBack, isOw
               <div className="w-14 h-14 bg-emerald-500/10 text-emerald-500 rounded-2xl flex items-center justify-center border border-emerald-500/20">
                 <Activity size={28} />
               </div>
-              <div>
+              <div className="text-left">
                 <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">Neural Link Status</h3>
                 <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">Live Sync Active</p>
               </div>
             </div>
 
-            <div className="space-y-4 pt-4">
+            <div className="space-y-4 pt-4 text-left">
               {[
                 { label: 'Manifest History', status: 'LOCKED' },
                 { label: 'AreaGPT Visibility', status: 'OPEN' },
@@ -131,7 +188,7 @@ const UserProfileView: React.FC<UserProfileViewProps> = ({ profile, onBack, isOw
         <div className="lg:col-span-2 space-y-10">
           {/* Detailed Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-[#0A0A0A] border-4 border-white/5 rounded-[3rem] p-10 flex flex-col justify-between group hover:border-[#E60000]/30 transition-all">
+            <div className="bg-[#0A0A0A] border-4 border-white/5 rounded-[3rem] p-10 flex flex-col justify-between group hover:border-[#E60000]/30 transition-all text-left">
               <div className="p-4 bg-[#E60000]/10 text-[#E60000] rounded-2xl w-fit mb-6">
                 <Truck size={32} />
               </div>
@@ -140,7 +197,7 @@ const UserProfileView: React.FC<UserProfileViewProps> = ({ profile, onBack, isOw
                 <p className="text-[10px] text-white/20 font-black uppercase tracking-widest italic">Total Missions</p>
               </div>
             </div>
-            <div className="bg-[#0A0A0A] border-4 border-white/5 rounded-[3rem] p-10 flex flex-col justify-between group hover:border-emerald-500/30 transition-all">
+            <div className="bg-[#0A0A0A] border-4 border-white/5 rounded-[3rem] p-10 flex flex-col justify-between group hover:border-emerald-500/30 transition-all text-left">
               <div className="p-4 bg-emerald-500/10 text-emerald-500 rounded-2xl w-fit mb-6">
                 <CheckCircle2 size={32} />
               </div>
@@ -149,7 +206,7 @@ const UserProfileView: React.FC<UserProfileViewProps> = ({ profile, onBack, isOw
                 <p className="text-[10px] text-white/20 font-black uppercase tracking-widest italic">Grid Reliability</p>
               </div>
             </div>
-            <div className="bg-[#0A0A0A] border-4 border-white/5 rounded-[3rem] p-10 flex flex-col justify-between group hover:border-blue-500/30 transition-all">
+            <div className="bg-[#0A0A0A] border-4 border-white/5 rounded-[3rem] p-10 flex flex-col justify-between group hover:border-blue-500/30 transition-all text-left">
               <div className="p-4 bg-blue-500/10 text-blue-500 rounded-2xl w-fit mb-6">
                 <TrendingUp size={32} />
               </div>
@@ -161,29 +218,35 @@ const UserProfileView: React.FC<UserProfileViewProps> = ({ profile, onBack, isOw
           </div>
 
           {/* Activity */}
-          <div className="bg-[#0A0A0A] border-4 border-white/5 rounded-[4rem] p-12 shadow-2xl space-y-10">
+          <div className="bg-[#0A0A0A] border-4 border-white/5 rounded-[4rem] p-12 shadow-2xl space-y-10 text-left">
             <div className="flex justify-between items-center">
               <h3 className="text-2xl font-black text-white uppercase italic tracking-tighter">Recent Grid Activity</h3>
               <button className="text-[10px] font-black text-[#E60000] uppercase tracking-widest italic border-b border-[#E60000]/20">VIEW ALL</button>
             </div>
             
             <div className="space-y-6">
-              {profile.recentActivity.map((act) => (
-                <div key={act.id} className="flex gap-6 items-start p-6 bg-white/[0.03] border border-white/5 rounded-3xl group hover:border-[#E60000]/20 transition-all">
-                  <div className="w-12 h-12 bg-[#E60000]/10 text-[#E60000] rounded-xl flex items-center justify-center shrink-0">
-                    <Zap size={20} />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="text-lg font-black text-white italic leading-none">{act.content}</p>
-                    <div className="flex items-center gap-4 mt-3">
-                      <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">{act.timestamp}</span>
-                      <span className="text-[10px] font-black text-[#E60000] uppercase tracking-widest italic flex items-center gap-1">
-                        <MapPin size={10} /> {act.location}
-                      </span>
+              {profile.recentActivity && profile.recentActivity.length > 0 ? (
+                profile.recentActivity.map((act) => (
+                  <div key={act.id} className="flex gap-6 items-start p-6 bg-white/[0.03] border border-white/5 rounded-3xl group hover:border-[#E60000]/20 transition-all">
+                    <div className="w-12 h-12 bg-[#E60000]/10 text-[#E60000] rounded-xl flex items-center justify-center shrink-0">
+                      <Zap size={20} />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-lg font-black text-white italic leading-none">{act.content}</p>
+                      <div className="flex items-center gap-4 mt-3">
+                        <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">{act.timestamp}</span>
+                        <span className="text-[10px] font-black text-[#E60000] uppercase tracking-widest italic flex items-center gap-1">
+                          <MapPin size={10} /> {act.location}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="py-10 text-center text-white/10 font-black uppercase italic tracking-widest">
+                   No recent grid activity detected.
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
