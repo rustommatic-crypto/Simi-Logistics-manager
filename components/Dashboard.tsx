@@ -19,7 +19,7 @@ import {
   Signal,
   Cpu
 } from 'lucide-react';
-import { NewsItem, UserRole, RouteMode, VerificationStatus } from '../types';
+import { NewsItem, UserRole, RouteMode, VerificationStatus, OrderCluster } from '../types';
 import { SimiAIService, decode, decodeAudioData, getOutputContext } from '../services/geminiService';
 import { ambientEngine } from '../services/ambientEngine';
 
@@ -64,10 +64,16 @@ interface DashboardProps {
   onNavigate: (tab: string) => void;
   currentMode: RouteMode;
   vStatus?: VerificationStatus;
+  activeMission?: OrderCluster | null;
+  targetDestination?: string;
+  activeManifest?: any;
+  onUpdateManifest?: (manifest: any) => void;
+  regLevels?: any[];
+  onUpdateMission?: (mission: any) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
-  onNavigate, currentMode, vStatus
+  onNavigate, currentMode, vStatus, activeMission
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSignalIndex, setCurrentSignalIndex] = useState(0);
@@ -140,7 +146,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
       {/* NEURAL TV TERMINAL */}
       <div className="relative w-full aspect-video md:aspect-[21/9] bg-[#0A0A0A] border-4 border-white/5 rounded-[3rem] overflow-hidden shadow-2xl group ring-1 ring-white/10">
-          {/* Signal Background with CRT Effect */}
           <img 
             key={currentSignal.id}
             src={currentSignal.image} 
@@ -149,13 +154,11 @@ const Dashboard: React.FC<DashboardProps> = ({
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
           
-          {/* Scanline Overlay */}
           <div className="absolute inset-0 pointer-events-none opacity-[0.03] overflow-hidden">
              <div className="w-full h-full bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%]" />
              <div className="absolute top-0 left-0 w-full h-1 bg-white/20 animate-scanline" />
           </div>
 
-          {/* HUD OVERLAYS */}
           <div className="absolute top-8 left-8 flex items-center gap-4 z-20">
              <div className="px-4 py-1.5 bg-[#E60000] text-white text-[9px] font-black uppercase rounded-lg shadow-lg flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse shadow-[0_0_8px_#fff]" />
@@ -171,7 +174,6 @@ const Dashboard: React.FC<DashboardProps> = ({
              <Activity size={16} className="text-[#E60000]" />
           </div>
 
-          {/* MAIN CONTENT AREA */}
           <div className="relative p-8 md:p-16 flex flex-col justify-end h-full z-10 space-y-6">
              <div className="space-y-4 max-w-3xl">
                 <div className="flex items-center gap-3">
@@ -207,13 +209,11 @@ const Dashboard: React.FC<DashboardProps> = ({
              </div>
           </div>
           
-          {/* DECORATIVE TERMINAL ELEMENTS */}
           <div className="absolute bottom-0 right-0 p-12 opacity-[0.03] pointer-events-none">
              <Monitor size={300} className="text-white" />
           </div>
       </div>
 
-      {/* MINI GIST TICKER REPLACED OLD GIST PLAYER */}
       <div className="w-full bg-[#0A0A0A] border-4 border-white/5 rounded-[2rem] p-4 md:p-6 overflow-hidden relative">
          <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 shrink-0">
@@ -228,7 +228,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                        <span className="text-xs font-black text-white/60 uppercase italic tracking-widest">{item.title}</span>
                     </div>
                   ))}
-                  {/* Duplicate for seamless loop */}
                   {gridFeed.map((item) => (
                     <div key={item.id + '_dup'} className="flex items-center gap-4">
                        <span className="text-white/20">●</span>
@@ -240,7 +239,6 @@ const Dashboard: React.FC<DashboardProps> = ({
          </div>
       </div>
 
-      {/* QUICK NODES */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <button 
             onClick={() => onNavigate('workspace')}
