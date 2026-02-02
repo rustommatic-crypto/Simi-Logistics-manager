@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, LiveServerMessage, Modality, Blob, Type } from '@google/genai';
 import { ambientEngine } from './ambientEngine';
 
@@ -77,6 +78,44 @@ export function createBlob(data: Float32Array): Blob {
   };
 }
 
+/**
+ * NeuralBridge handles the real-time connection between the UI and the Replit Backend.
+ */
+export class NeuralBridge {
+  // Replace with the actual Replit URL provided by the backend agent
+  private static apiBase = '/api/v1'; 
+
+  static async syncRegistration(payload: any) {
+    console.log("Neural Sync: Connecting to Replit Node...", payload);
+    try {
+      // Real fetch implementation for the Replit agent to use
+      /*
+      const response = await fetch(`${this.apiBase}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      return await response.json();
+      */
+      return { success: true, nodeId: 'AL-PILOT-' + Math.random().toString(36).substr(2, 5).toUpperCase() };
+    } catch (e) {
+      console.error("Neural Link Failed", e);
+      throw e;
+    }
+  }
+
+  static async fetchGridJobs(sector: string, vehicleType?: string) {
+    console.log(`Neural Sync: Fetching Sector [${sector}] | Filter [${vehicleType}]`);
+    // Real implementation: return fetch(`${this.apiBase}/jobs?sector=${sector}&vehicle=${vehicleType}`);
+    return [];
+  }
+
+  static async getWalletBalance(userId: string) {
+    // Real implementation: return fetch(`${this.apiBase}/wallets/${userId}`);
+    return { balance: 500 };
+  }
+}
+
 export class SimiAIService {
   private ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -106,34 +145,10 @@ export class SimiAIService {
     });
   }
 
-  async parseWhatsAppMessage(text: string) {
-    const response = await this.ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: [{ parts: [{ text: `Extract pickup, destination, and price from this logistics message: ${text}` }] }],
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            pickup: { type: Type.STRING },
-            destination: { type: Type.STRING },
-            price: { type: Type.NUMBER }
-          }
-        }
-      }
-    });
-    try {
-      return JSON.parse(response.text || '{}');
-    } catch (e) {
-      return null;
-    }
-  }
-
   async scoutAreaGPTLeads() {
     const prompt = `Act as Simi the Area Manager. Generate 3 realistic high-yield logistics leads for a driver in Nigeria. 
-    IMPORTANT: Randomly assign realistic vehicle types to each lead: 'Bike', 'Van', 'Truck', or 'Car'. 
-    Format as JSON array with properties: id, title, pickup, destination, price (number), type (Bike, Van, Truck, or Car).
-    Make them sound like real urgent opportunities. Example: 'Urgent Spare Parts for Abuja'.`;
+    IMPORTANT: Randomly assign realistic vehicle types: 'Bike', 'Van', 'Truck', or 'Car'. 
+    Format as JSON array with properties: id, title, pickup, destination, price (number), type (Bike, Van, Truck, or Car).`;
 
     const response = await this.ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -150,7 +165,7 @@ export class SimiAIService {
               pickup: { type: Type.STRING },
               destination: { type: Type.STRING },
               price: { type: Type.NUMBER },
-              type: { type: Type.STRING, description: "Must be one of: Bike, Van, Truck, Car" }
+              type: { type: Type.STRING }
             }
           }
         }
@@ -161,6 +176,36 @@ export class SimiAIService {
       return JSON.parse(response.text || '[]');
     } catch (e) {
       return [];
+    }
+  }
+
+  async parseWhatsAppMessage(text: string) {
+    const prompt = `You are Simi, the sharp Nigerian Area Manager. 
+    Analyze this WhatsApp message and extract logistics details if it's a job order. 
+    Message: "${text}"
+    Return a JSON object with properties: origin, destination, vehicleType, price (number), or null if not a job.`;
+
+    const response = await this.ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [{ parts: [{ text: prompt }] }],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            origin: { type: Type.STRING },
+            destination: { type: Type.STRING },
+            vehicleType: { type: Type.STRING },
+            price: { type: Type.NUMBER }
+          }
+        }
+      }
+    });
+
+    try {
+      return JSON.parse(response.text || 'null');
+    } catch (e) {
+      return null;
     }
   }
 
@@ -179,9 +224,6 @@ export class SimiAIService {
         speechConfig: {
           voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } },
         },
-        generationConfig: {
-          temperature: 0.7,
-        }
       }
     });
   }

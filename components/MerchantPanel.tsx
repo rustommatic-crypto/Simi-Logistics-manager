@@ -21,14 +21,17 @@ import {
 import { FleetVehicle, VehicleType, UserRole, RegistrationCategory } from '../types';
 import { getVehicleIcon } from './OrderClusters';
 
+// Added missing pilotId and totalRevenue to mock data objects
 const mockFleet: (FleetVehicle & { pilotLevel?: RegistrationCategory })[] = [
   { 
     id: 'v1', 
     type: VehicleType.TRUCK, 
     plateNumber: 'LAG-492-BC', 
     pilotName: 'Tunde B.',
+    pilotId: 'P-101',
     status: 'active',
     installmentDebt: 4500000,
+    totalRevenue: 850000,
     pilotLevel: RegistrationCategory.INTERSTATE,
     expiryDates: { insurance: '2024-12-10', roadWorthiness: '2024-11-05', hackneyPermit: '2025-01-20' }
   },
@@ -37,8 +40,10 @@ const mockFleet: (FleetVehicle & { pilotLevel?: RegistrationCategory })[] = [
     type: VehicleType.VAN, 
     plateNumber: 'ABJ-118-XY', 
     pilotName: 'Musa A.',
+    pilotId: 'P-102',
     status: 'maintenance',
     installmentDebt: 120000,
+    totalRevenue: 45000,
     pilotLevel: RegistrationCategory.LOCAL,
     expiryDates: { insurance: '2024-05-10', roadWorthiness: '2024-06-12', hackneyPermit: '2024-10-15' }
   },
@@ -47,8 +52,10 @@ const mockFleet: (FleetVehicle & { pilotLevel?: RegistrationCategory })[] = [
     type: VehicleType.TRUCK, 
     plateNumber: 'KAN-772-ZZ', 
     pilotName: 'Alhaji S.',
+    pilotId: 'P-103',
     status: 'offline',
     installmentDebt: 0,
+    totalRevenue: 1200000,
     pilotLevel: RegistrationCategory.INTERNATIONAL,
     expiryDates: { insurance: '2025-01-01', roadWorthiness: '2025-03-12', hackneyPermit: '2025-06-15' }
   },

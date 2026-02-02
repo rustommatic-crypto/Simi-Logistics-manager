@@ -16,14 +16,14 @@ export enum UserRole {
   AGENT = 'Global Agent'
 }
 
-// Verification states for pilots and ogas
+// Verification states
 export enum VerificationStatus {
   UNVERIFIED = 'Unverified',
   PENDING = 'Pending Approval',
   APPROVED = 'Approved'
 }
 
-// Operating modes for route tracking
+// Operating modes
 export enum RouteMode {
   ROAMING = 'Roaming',
   TRIP = 'Going To',
@@ -31,7 +31,7 @@ export enum RouteMode {
   GLOBAL = 'Global'
 }
 
-// Registration tiers for area coverage
+// Registration tiers
 export enum RegistrationCategory {
   LOCAL = 'Area Runs',
   INTERSTATE = 'Long Road',
@@ -39,7 +39,7 @@ export enum RegistrationCategory {
   GLOBAL = 'Global Grid'
 }
 
-// Specialized service categories
+// Service categories
 export enum ServiceType {
   LOGISTICS = 'Logistics',
   TRANSPORT = 'Transport',
@@ -49,19 +49,31 @@ export enum ServiceType {
   TRAVEL = 'Travel'
 }
 
-// Trip types for planning
 export enum TripType {
   PASSENGER = 'Passenger',
   CARGO = 'Cargo'
 }
 
-// Categories for global agents
 export enum AgentCategory {
   COURIER = 'Courier',
   TRAVEL = 'Travel'
 }
 
-// Job structure for incoming alerts
+// Detailed Registration Payload for Backend Sync
+export interface RegistrationPayload {
+  role: UserRole;
+  country: string;
+  state: string;
+  tiers: RegistrationCategory[];
+  nin: string;
+  biometrics: {
+    facialCaptured: boolean;
+    siteCaptured: boolean;
+  };
+  agentCategory?: AgentCategory;
+  bossType?: 'employer' | 'hp_owner';
+}
+
 export interface IncomingJob {
   id: string;
   vehicleType: VehicleType;
@@ -71,21 +83,9 @@ export interface IncomingJob {
   serviceType?: ServiceType;
   duration?: string;
   category?: RegistrationCategory;
+  status?: 'open' | 'claimed' | 'completed';
 }
 
-// Gist/News feed items
-export interface NewsItem {
-  id: string;
-  author: string;
-  type: string;
-  title: string;
-  content: string;
-  time: string;
-  isOfficial: boolean;
-  imageUrl: string;
-}
-
-// Grouped orders for efficiency missions
 export interface OrderCluster {
   id: string;
   name: string;
@@ -95,16 +95,18 @@ export interface OrderCluster {
   efficiency: number;
   orders: { id: string; pickup: string; dest: string; price: number }[];
   estimatedTime?: number;
+  vehicleRequired: VehicleType;
 }
 
-// Fleet vehicle management structure
 export interface FleetVehicle {
   id: string;
   type: VehicleType;
   plateNumber: string;
   pilotName: string;
+  pilotId: string;
   status: 'active' | 'maintenance' | 'offline';
   installmentDebt: number;
+  totalRevenue: number;
   expiryDates: {
     insurance: string;
     roadWorthiness: string;
@@ -112,7 +114,6 @@ export interface FleetVehicle {
   };
 }
 
-// Community social feed structure
 export interface CommunityPost {
   id: string;
   user: string;
@@ -127,43 +128,6 @@ export interface CommunityPost {
   price?: number;
 }
 
-// Messaging structure
-export interface ChatMessage {
-  id: string;
-  senderId: string;
-  senderName: string;
-  text: string;
-  time: string;
-  isMe: boolean;
-}
-
-// Detailed pilot profile
-export interface UserProfile {
-  id: string;
-  name: string;
-  avatar: string;
-  role: UserRole;
-  rating: number;
-  joinedDate: string;
-  bio: string;
-  services: ServiceType[];
-  stats: {
-    totalTrips: number;
-    completionRate: number;
-    reputation: number;
-  };
-  recentActivity: {
-    id: string;
-    content: string;
-    timestamp: string;
-    location: string;
-  }[];
-  registrationLevels: RegistrationCategory[];
-  verificationStatus: VerificationStatus;
-  activeVehicle: VehicleType;
-}
-
-// Global market leads for agents
 export interface GlobalLead {
   id: string;
   source: string;
@@ -175,4 +139,34 @@ export interface GlobalLead {
   budget?: string;
   timestamp: string;
   apiLinked?: boolean;
+}
+
+// Chat message interface for community private chats
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  time: string;
+  isMe: boolean;
+}
+
+// User profile interface for directory and profile views
+export interface UserProfile {
+  name: string;
+  avatar: string;
+  rating: number;
+  bio: string;
+  registrationLevels: RegistrationCategory[];
+  stats: {
+    totalTrips: number;
+    completionRate: number;
+    reputation: number;
+  };
+  recentActivity?: {
+    id: string;
+    content: string;
+    timestamp: string;
+    location: string;
+  }[];
 }

@@ -21,10 +21,30 @@ import {
   Plane,
   Ticket,
   BadgeCheck,
-  FileText
+  FileText,
+  MapPin,
+  ChevronRight,
+  Flag,
+  Navigation,
+  Globe2
 } from 'lucide-react';
-import { SimiAIService } from '../services/geminiService';
-import { UserRole, RegistrationCategory, AgentCategory } from '../types';
+import { SimiAIService, NeuralBridge } from '../services/geminiService';
+import { UserRole, RegistrationCategory, AgentCategory, RegistrationPayload } from '../types';
+
+const NIGERIAN_STATES = [
+  "Lagos", "Abuja (FCT)", "Rivers", "Kano", "Oyo", "Enugu", "Anambra", "Delta", 
+  "Kaduna", "Ogun", "Edo", "Abia", "Adamawa", "Akwa Ibom", "Bauchi", "Bayelsa", 
+  "Benue", "Borno", "Cross River", "Ebonyi", "Ekiti", "Gombe", "Imo", "Jigawa", 
+  "Katsina", "Kebbi", "Kogi", "Kwara", "Nasarawa", "Niger", "Ondo", "Osun", 
+  "Plateau", "Sokoto", "Taraba", "Yobe", "Zamfara"
+];
+
+const AFRICAN_REGIONS = [
+  { id: 'NG', name: 'Nigeria', active: true, states: NIGERIAN_STATES },
+  { id: 'GH', name: 'Ghana', active: false, states: ["Accra", "Kumasi", "Tamale"] },
+  { id: 'KE', name: 'Kenya', active: false, states: ["Nairobi", "Mombasa", "Kisumu"] },
+  { id: 'ZA', name: 'South Africa', active: false, states: ["Johannesburg", "Cape Town", "Durban"] }
+];
 
 interface RegistrationCenterProps {
   onNavigate: (tab: string) => void;
@@ -36,6 +56,8 @@ const RegistrationCenter: React.FC<RegistrationCenterProps> = ({ onNavigate, onS
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [selectedAgentCat, setSelectedAgentCat] = useState<AgentCategory | null>(null);
   const [subBossType, setSubBossType] = useState<'employer' | 'hp_owner' | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState('NG');
+  const [selectedState, setSelectedState] = useState('');
   const [selectedTiers, setSelectedTiers] = useState<RegistrationCategory[]>([]);
   const [nin, setNin] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -71,9 +93,7 @@ const RegistrationCenter: React.FC<RegistrationCenterProps> = ({ onNavigate, onS
 
   const handleRoleSelection = (roleId: UserRole) => {
     setSelectedRole(roleId);
-    if (roleId === UserRole.AGENT) setStep(1.5); // Global Agent Sub-selection
-    else if (roleId === UserRole.EMPLOYER) setStep(1.1); // Fleet Boss Sub-selection
-    else setStep(2); // Pilot goes straight to Tiers
+    setStep(1.2);
   };
 
   const handleTierClick = (tierId: RegistrationCategory) => {
@@ -119,14 +139,35 @@ const RegistrationCenter: React.FC<RegistrationCenterProps> = ({ onNavigate, onS
 
   const handleFinalSubmit = async () => {
     setIsSyncing(true);
-    const simi = new SimiAIService();
-    try {
-      await simi.broadcastNews(`System Alert: New ${selectedRole} onboarding. Verification nodes locked.`);
-    } catch (e) {}
     
-    setTimeout(() => {
-      onSuccess(selectedRole!, selectedTiers, selectedAgentCat || undefined);
-    }, 2500);
+    const payload: RegistrationPayload = {
+      role: selectedRole!,
+      country: selectedCountry,
+      state: selectedState,
+      tiers: selectedTiers,
+      nin: nin,
+      biometrics: {
+        facialCaptured: capturedFacial,
+        siteCaptured: capturedArea
+      },
+      agentCategory: selectedAgentCat || undefined,
+      bossType: subBossType || undefined
+    };
+
+    try {
+      // Syncing with Backend Node
+      await NeuralBridge.syncRegistration(payload);
+      
+      const simi = new SimiAIService();
+      await simi.broadcastNews(`System Alert: New ${selectedRole} onboarding from ${selectedState}, ${selectedCountry}. Verification nodes locked.`);
+      
+      setTimeout(() => {
+        onSuccess(selectedRole!, selectedTiers, selectedAgentCat || undefined);
+      }, 2000);
+    } catch (e) {
+      alert("Neural Bridge Error: Could not link to backend.");
+      setIsSyncing(false);
+    }
   };
 
   return (
@@ -135,7 +176,7 @@ const RegistrationCenter: React.FC<RegistrationCenterProps> = ({ onNavigate, onS
         <div className="flex items-center gap-6">
           <button 
             onClick={() => {
-              if (step === 1.1 || step === 1.5) setStep(1);
+              if (step === 1.1 || step === 1.5 || step === 1.2) setStep(1);
               else if (step > 1) setStep(Math.floor(step));
               else onNavigate('dashboard');
             }} 
@@ -144,13 +185,13 @@ const RegistrationCenter: React.FC<RegistrationCenterProps> = ({ onNavigate, onS
             <ArrowLeft size={32} />
           </button>
           <div>
-            <h1 className="text-5xl font-black italic uppercase display-font tracking-tighter text-white">Neural Onboarding</h1>
+            <h1 className="text-5xl font-black italic uppercase display-font tracking-tighter text-white leading-none">Neural Onboarding</h1>
             <p className="text-white/40 font-black text-[10px] uppercase tracking-[0.5em] italic mt-2">Authority Node Verification</p>
           </div>
         </div>
         <div className="flex gap-2">
-           {[1, 2, 3, 4].map(s => (
-             <div key={s} className={`h-2 w-12 rounded-full transition-all duration-500 ${step >= s ? 'bg-[#E60000]' : 'bg-white/10'}`} />
+           {[1, 2, 3, 4, 5].map(s => (
+             <div key={s} className={`h-2 w-10 rounded-full transition-all duration-500 ${step >= s ? 'bg-[#E60000]' : 'bg-white/10'}`} />
            ))}
         </div>
       </div>
@@ -161,6 +202,7 @@ const RegistrationCenter: React.FC<RegistrationCenterProps> = ({ onNavigate, onS
           <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-10 text-center space-y-8">
              <RefreshCcw size={80} className="animate-spin text-[#E60000]" />
              <h2 className="text-4xl font-black italic uppercase text-white">Linking Grid Persona...</h2>
+             <p className="text-white/40 font-bold uppercase tracking-widest text-xs">Transmitting Sector Nodes to Backend Hub</p>
           </div>
         )}
 
@@ -190,12 +232,71 @@ const RegistrationCenter: React.FC<RegistrationCenterProps> = ({ onNavigate, onS
           </div>
         )}
 
-        {/* SUB-SELECTION: Boss Type (Employer vs HP Owner) */}
+        {step === 1.2 && (
+          <div className="space-y-12 animate-in slide-in-from-right-10 duration-500">
+             <div className="text-left">
+                <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Sector Link</h2>
+                <p className="text-lg text-white/40 font-bold italic mt-2">Simi: "Driver, select your operating sector. We are linking all of Nigeria and Africa soon."</p>
+             </div>
+
+             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                <div className="lg:col-span-4 space-y-4">
+                   <h3 className="text-[10px] font-black text-white/20 uppercase tracking-widest italic mb-4">Select Country</h3>
+                   <div className="space-y-3">
+                      {AFRICAN_REGIONS.map(country => (
+                        <button 
+                          key={country.id}
+                          disabled={!country.active}
+                          onClick={() => setSelectedCountry(country.id)}
+                          className={`w-full p-6 rounded-[1.5rem] border-2 flex items-center justify-between transition-all ${selectedCountry === country.id ? 'bg-[#E60000]/5 border-[#E60000] text-white shadow-xl' : country.active ? 'bg-black border-white/5 text-white/40 hover:border-white/10' : 'bg-black border-white/5 opacity-20 cursor-not-allowed'}`}
+                        >
+                           <div className="flex items-center gap-4">
+                              <Globe2 size={24} />
+                              <span className="text-lg font-black italic uppercase">{country.name}</span>
+                           </div>
+                           {!country.active && <span className="text-[8px] font-black uppercase opacity-60">Locked</span>}
+                        </button>
+                      ))}
+                   </div>
+                </div>
+
+                <div className="lg:col-span-8 space-y-6">
+                   <h3 className="text-[10px] font-black text-white/20 uppercase tracking-widest italic mb-4">Select Node (State)</h3>
+                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto scrollbar-hide p-4 bg-white/[0.02] border border-white/5 rounded-[2.5rem]">
+                      {AFRICAN_REGIONS.find(c => c.id === selectedCountry)?.states.map(state => (
+                        <button 
+                          key={state}
+                          onClick={() => setSelectedState(state)}
+                          className={`p-5 rounded-2xl border-2 text-[10px] font-black uppercase italic transition-all ${selectedState === state ? 'bg-[#E60000] text-white border-transparent shadow-lg scale-105' : 'bg-black border-white/5 text-white/20 hover:border-white/10'}`}
+                        >
+                           {state}
+                        </button>
+                      ))}
+                   </div>
+                   
+                   <div className="pt-8">
+                      <button 
+                        disabled={!selectedState}
+                        onClick={() => {
+                           if (selectedRole === UserRole.AGENT) setStep(1.5);
+                           else if (selectedRole === UserRole.EMPLOYER) setStep(1.1);
+                           else setStep(2);
+                        }}
+                        className={`w-full py-8 rounded-[2.5rem] font-black text-2xl uppercase italic flex items-center justify-center gap-4 transition-all shadow-2xl ${selectedState ? 'bg-[#E60000] text-white hover:scale-105 active:scale-95' : 'bg-white/5 text-white/10 cursor-not-allowed'}`}
+                      >
+                         LINK SECTOR <Navigation size={28} />
+                      </button>
+                   </div>
+                </div>
+             </div>
+          </div>
+        )}
+
         {step === 1.1 && (
           <div className="space-y-10 animate-in slide-in-from-right-10 duration-500">
             <div className="text-left">
                <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter text-blue-500">Boss Authority Path</h2>
-               <p className="text-lg text-white/40 font-bold italic mt-2">Simi: "Boss, wetin be your movement? You be Employer or HP Asset Owner?"</p>
+               <p className="text-lg text-white/40 font-bold italic mt-2">Simi: "Boss, wetin be your movement for {selectedState}?"</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                {bossTypes.map(boss => (
@@ -217,12 +318,11 @@ const RegistrationCenter: React.FC<RegistrationCenterProps> = ({ onNavigate, onS
           </div>
         )}
 
-        {/* SUB-SELECTION: Agent Type */}
         {step === 1.5 && (
           <div className="space-y-10 animate-in slide-in-from-right-10 duration-500">
             <div className="text-left">
                <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter text-emerald-500">Global Agent Type</h2>
-               <p className="text-lg text-white/40 font-bold italic mt-2">Simi: "Agent, which international leads you wan handle?"</p>
+               <p className="text-lg text-white/40 font-bold italic mt-2">Simi: "Agent, which international leads you wan handle in {selectedState}?"</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                {agentTypes.map(agent => (
@@ -247,7 +347,7 @@ const RegistrationCenter: React.FC<RegistrationCenterProps> = ({ onNavigate, onS
         {step === 2 && (
           <div className="space-y-10 animate-in slide-in-from-right-10 duration-500">
             <div className="text-left">
-               <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Reach & Reach</h2>
+               <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Reach & Radius</h2>
                <p className="text-lg text-white/40 font-bold italic mt-2">Simi: "Select your operating tiers. AreaGPT leads depend on this."</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

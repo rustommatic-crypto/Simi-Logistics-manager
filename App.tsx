@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Sidebar from './Sidebar';
 import Dashboard from './components/Dashboard';
@@ -146,6 +147,7 @@ const App: React.FC = () => {
   };
 
   const handleAcceptPing = (job: IncomingJob) => {
+    // Fix: Added vehicleRequired to meet the OrderCluster interface
     const cluster: OrderCluster = {
       id: `MISSION-${job.id}`,
       name: `AI SNIPE: ${job.origin} to ${job.destination}`,
@@ -153,6 +155,7 @@ const App: React.FC = () => {
       count: 1,
       totalPrice: job.price,
       efficiency: 100,
+      vehicleRequired: job.vehicleType,
       orders: [{ id: job.id, pickup: job.origin, dest: job.destination, price: job.price }]
     };
     handleEngageMission(cluster);
