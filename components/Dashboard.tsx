@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Activity,
@@ -20,7 +21,8 @@ import {
   Bike,
   Car,
   BusFront,
-  Plane
+  Plane,
+  ShieldAlert
 } from 'lucide-react';
 import { UserRole, RouteMode, VerificationStatus, OrderCluster, VehicleType } from '../types';
 import { SimiAIService, decode, decodeAudioData, getOutputContext } from '../services/geminiService';
@@ -76,10 +78,11 @@ interface DashboardProps {
   vStatus?: VerificationStatus;
   activeMission?: OrderCluster | null;
   activeTrips?: any[];
+  insuranceActive?: boolean;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
-  onNavigate, currentMode, vStatus, activeMission, activeTrips = []
+  onNavigate, currentMode, vStatus, activeMission, activeTrips = [], insuranceActive = true
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSignalIndex, setCurrentSignalIndex] = useState(0);
@@ -164,6 +167,11 @@ const Dashboard: React.FC<DashboardProps> = ({
            <div className={`px-4 py-1.5 text-white text-[9px] font-black uppercase rounded-xl shadow-lg flex items-center gap-2 ${currentSignal.type === 'live_movement' ? 'bg-emerald-600' : 'bg-[#E60000]'}`}>
              <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" /> {currentSignal.type === 'live_movement' ? 'LIVE NEURAL BROADCAST' : 'SIGNAL INTERCEPT'}
            </div>
+           {insuranceActive && (
+              <div className="px-4 py-1.5 bg-emerald-500/20 backdrop-blur-md border border-emerald-500/30 text-emerald-500 text-[9px] font-black uppercase rounded-xl flex items-center gap-2">
+                 <ShieldCheck size={12} /> LIFE COVER ACTIVE
+              </div>
+           )}
            <div className="px-4 py-1.5 bg-black/40 backdrop-blur-md border border-white/10 text-white/40 text-[9px] font-black uppercase rounded-xl">
              {currentSignal.subtitle}
            </div>
@@ -222,11 +230,11 @@ const Dashboard: React.FC<DashboardProps> = ({
          </div>
          <div onClick={() => onNavigate('registration-center')} className="bg-[#0A0A0A] border-4 border-white/5 rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-8 text-left cursor-pointer hover:border-[#E60000]/20 transition-all group">
             <div className="flex justify-between items-start mb-4 md:mb-6">
-               <div className="p-2.5 md:p-3 bg-white/5 text-white/30 rounded-xl group-hover:scale-110 transition-transform"><ShieldCheck size={20} /></div>
-               <span className="text-[8px] font-black text-white/20 uppercase italic">Level 4</span>
+               <div className="p-2.5 md:p-3 bg-emerald-500/10 text-emerald-500 rounded-xl group-hover:scale-110 transition-transform"><ShieldCheck size={20} /></div>
+               <span className="text-[8px] font-black text-emerald-500 uppercase italic">COVERED</span>
             </div>
-            <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Papers</p>
-            <p className="text-xl md:text-2xl font-black text-white italic tech-mono mt-1 leading-none">VERIFIED</p>
+            <p className="text-[9px] font-black text-white/20 uppercase tracking-widest">Life Shield</p>
+            <p className="text-xl md:text-2xl font-black text-white italic tech-mono mt-1 leading-none">PROTECTED</p>
          </div>
       </div>
 

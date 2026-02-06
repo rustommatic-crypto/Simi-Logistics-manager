@@ -163,6 +163,11 @@ export interface UserProfile {
     completionRate: number;
     reputation: number;
   };
+  fuelCredit: {
+    limit: number;
+    used: number;
+  };
+  insuranceActive: boolean;
   recentActivity?: {
     id: string;
     content: string;
